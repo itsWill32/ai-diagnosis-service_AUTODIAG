@@ -61,6 +61,7 @@ venv.bak/
 .env
 .env.local
 .env.*.local
+.env.example
 
 # FastAPI
 *.db

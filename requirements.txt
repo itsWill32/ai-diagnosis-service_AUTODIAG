@@ -9,10 +9,7 @@ uvicorn[standard]==0.32.1
 pydantic==2.10.3           # ✅ ACTUALIZADO (tiene wheels para Python 3.13)
 pydantic-settings==2.6.1   # ✅ ACTUALIZADO
 
-# Database (SQLAlchemy)
-sqlalchemy==2.0.36         # ✅ ACTUALIZADO
-psycopg[binary]==3.2.3     # ✅ ACTUALIZADO
-alembic==1.14.0            # ✅ ACTUALIZADO
+prisma==0.15.0
 
 # Redis (for Pub/Sub events)
 redis==5.2.1               # ✅ ACTUALIZADO

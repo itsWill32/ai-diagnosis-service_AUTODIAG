@@ -1,0 +1,214 @@
+// This is your Prisma schema file for Diagnosis Service (Python)
+// Learn more: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-py"
+  recursive_type_depth = 5
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// DIAGNOSIS SERVICE MODELS
+// ============================================
+
+model Diagnosis {
+  id          String   @id @default(uuid())
+  
+  // User and vehicle
+  userId      String   // FK to Auth Service
+  vehicleId   String   // FK to Vehicle Service
+  
+  // Diagnosis details
+  symptoms    String[] // Array of symptoms described
+  diagnosis   String   // AI-generated diagnosis
+  
+  // Urgency classification
+  urgency     UrgencyLevel
+  urgencyScore Float   // 0-1 score from ML model
+  
+  // Recommended actions
+  recommendations String[]
+  
+  // Cost estimation
+  estimatedCostMin Float?
+  estimatedCostMax Float?
+  
+  // Parts that may be needed
+  estimatedParts String[]
+  
+  // Time estimation
+  estimatedTimeMin Int? // Minutes
+  estimatedTimeMax Int? // Minutes
+  
+  // Safety warning
+  safetyWarning String?
+  canDrive      Boolean @default(true)
+  
+  // ML Model info
+  modelVersion  String?
+  confidence    Float?  // 0-1 confidence score
+  
+  // Conversation history
+  conversations DiagnosisConversation[]
+  
+  // Media
+  photos        String[] // URLs to uploaded photos
+  audioFiles    String[] // URLs to audio descriptions
+  
+  // Status
+  isCompleted   Boolean  @default(false)
+  
+  // Timestamps
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@index([userId])
+  @@index([vehicleId])
+  @@index([urgency])
+  @@index([createdAt])
+  @@map("diagnoses")
+}
+
+enum UrgencyLevel {
+  LOW       // Verde - Puede esperar
+  MEDIUM    // Amarillo - Atender pronto
+  HIGH      // Naranja - Atender esta semana
+  CRITICAL  // Rojo - Atender inmediatamente
+}
+
+// ============================================
+// DIAGNOSIS CONVERSATION (Chat History)
+// ============================================
+
+model DiagnosisConversation {
+  id          String   @id @default(uuid())
+  diagnosisId String
+  diagnosis   Diagnosis @relation(fields: [diagnosisId], references: [id], onDelete: Cascade)
+  
+  // Message
+  role        String   // 'user' | 'assistant' | 'system'
+  content     String
+  
+  // Metadata
+  tokens      Int?     // Token count
+  modelUsed   String?  // Gemini model version
+  
+  // Timestamps
+  createdAt   DateTime @default(now())
+  
+  @@index([diagnosisId])
+  @@index([createdAt])
+  @@map("diagnosis_conversations")
+}
+
+// ============================================
+// DIAGNOSIS SENTIMENT ANALYSIS
+// ============================================
+
+model DiagnosisSentiment {
+  id          String   @id @default(uuid())
+  diagnosisId String   @unique
+  
+  // Sentiment scores (0-1)
+  urgencyScore    Float  // How urgent does the user feel?
+  frustrationScore Float // How frustrated is the user?
+  clarityScore    Float  // How clear is the description?
+  
+  // Extracted emotions
+  emotions        String[] // ['worried', 'confused', 'calm', etc.]
+  
+  // Keywords extracted
+  technicalTerms  String[]
+  commonWords     String[]
+  
+  // Language quality
+  languageQuality String // 'clear' | 'vague' | 'technical'
+  
+  // Timestamps
+  createdAt       DateTime @default(now())
+  
+  @@index([diagnosisId])
+  @@map("diagnosis_sentiments")
+}
+
+// ============================================
+// DIAGNOSTIC CODES (OBD-II codes, etc.)
+// ============================================
+
+model DiagnosticCode {
+  id          String   @id @default(uuid())
+  
+  // Code details
+  code        String   @unique // e.g., "P0420"
+  system      String   // "Powertrain", "Body", "Chassis", "Network"
+  category    String   // "Fuel", "Ignition", "Emission", etc.
+  description String
+  
+  // Severity
+  severity    UrgencyLevel
+  
+  // Common causes
+  commonCauses String[]
+  
+  // Recommended fixes
+  recommendedFixes String[]
+  
+  // Average costs
+  avgCostMin  Float?
+  avgCostMax  Float?
+  
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([code])
+  @@index([system])
+  @@map("diagnostic_codes")
+}
+
+// ============================================
+// KNOWLEDGE BASE (FAQ / Common Issues)
+// ============================================
+
+model KnowledgeBase {
+  id          String   @id @default(uuid())
+  
+  // Issue details
+  title       String
+  description String
+  symptoms    String[]
+  
+  // Solution
+  solution    String
+  preventiveMeasures String[]
+  
+  // Related codes
+  relatedCodes String[]
+  
+  // Costs
+  typicalCost Float?
+  
+  // Difficulty
+  repairDifficulty String // 'easy' | 'medium' | 'hard' | 'professional'
+  
+  // Tags for search
+  tags        String[]
+  
+  // Usage stats
+  viewCount   Int      @default(0)
+  helpfulCount Int     @default(0)
+  
+  // Status
+  isPublished Boolean  @default(true)
+  
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([tags])
+  @@map("knowledge_base")
+}

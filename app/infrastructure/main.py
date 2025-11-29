@@ -11,12 +11,23 @@ from app.infrastructure.middleware import (
     request_logging_middleware
 )
 
+from app.infrastructure.api.routers import (
+    diagnosis_router,
+    classification_router,
+    recommendations_router,
+    sentiment_router,
+    analytics_router
+)
+
+
+
 
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
+
 
 
 @asynccontextmanager
@@ -26,27 +37,24 @@ async def lifespan(app: FastAPI):
     
     settings = get_settings()
     
-    logger.info(f"🔌 Port: {settings.PORT}")
-    logger.info(f"🗄️  Database: Connected to PostgreSQL")
-    logger.info(f"🔴 Redis: Connected to {settings.REDIS_URL.split('@')[1] if '@' in settings.REDIS_URL else 'Redis'}")
+    logger.info(f"Database: Connected ")
+    logger.info(f"Redis: Connected to {settings.REDIS_URL.split('@')[1] if '@' in settings.REDIS_URL else 'Redis'}")
     
     logger.info("SERVICE READY ")
     
-
-    
     yield
     
-    logger.info("SHUTTING DOWN  SERVICE")
+    logger.info("SHUTTING DOWN SERVICE")
 
-    
 
 
 
 app = FastAPI(
     title="AutoDiag - Diagnosis Service API",
-    
-    version="1.0.0"
+    version="1.0.0",
+
 )
+
 
 
 settings = get_settings()
@@ -58,13 +66,14 @@ allowed_origins = settings.ALLOWED_ORIGINS.split(",") if settings.ALLOWED_ORIGIN
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins,  
-    allow_credentials=True,  
-    allow_methods=["*"],  
-    allow_headers=["*"],  
-    expose_headers=["*"],  
-    max_age=3600,  
+    allow_origins=allowed_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["*"],
+    max_age=3600,
 )
+
 
 
 setup_error_handlers(app)
@@ -95,7 +104,7 @@ async def health_check():
     description="Información básica del servicio"
 )
 async def root():
-    
+
     return {
         "service": "AutoDiag - Diagnosis Service",
         "version": "1.0.0",
@@ -104,12 +113,12 @@ async def root():
 
 
 
+
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
 
     logger.error(f"Unhandled exception: {str(exc)}", exc_info=True)
     
-
     error_message = "Internal server error"
     
     return JSONResponse(
@@ -124,10 +133,41 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 
 
+app.include_router(
+    diagnosis_router,
+    prefix="/sessions",
+    tags=["Diagnosis"]
+)
+
+app.include_router(
+    classification_router,
+    prefix="/sessions",
+    tags=["Classification"]
+)
+
+app.include_router(
+    recommendations_router,
+    prefix="/sessions",
+    tags=["Recommendations"]
+)
+
+app.include_router(
+    sentiment_router,
+    prefix="/sentiment",
+    tags=["Sentiment"]
+)
+
+app.include_router(
+    analytics_router,
+    prefix="/analytics",
+    tags=["Analytics"]
+)
+
+
+
 if __name__ == "__main__":
     import uvicorn
     
-
     uvicorn.run(
         "main:app",
         host="0.0.0.0",

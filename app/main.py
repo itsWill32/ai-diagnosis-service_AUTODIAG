@@ -1,4 +1,5 @@
 
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -6,6 +7,7 @@ from contextlib import asynccontextmanager
 import logging
 
 from app.infrastructure.config.settings import get_settings
+from app.infrastructure.config.database import initialize_database, close_database
 from app.infrastructure.middleware import (
     setup_error_handlers,
     request_logging_middleware
@@ -21,7 +23,6 @@ from app.infrastructure.api.routers import (
 
 
 
-
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -32,28 +33,41 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-
     logger.info("STARTING  SERVICE")
     
     settings = get_settings()
     
-    logger.info(f"Database: Connected ")
-    logger.info(f"Redis: Connected to {settings.REDIS_URL.split('@')[1] if '@' in settings.REDIS_URL else 'Redis'}")
+    try:
+        await initialize_database()
+        logger.info(" DB Connected")
+    except Exception as e:
+        logger.error(f" DB failed: {str(e)}")
+        raise
     
-    logger.info("SERVICE READY ")
+    logger.info(f" Redis: Connected to {settings.REDIS_URL.split('@')[1] if '@' in settings.REDIS_URL else 'Redis'}")
+    logger.info(" SERVICE READY")
     
     yield
     
     logger.info("SHUTTING DOWN SERVICE")
-
+    
+    try:
+        await close_database()
+        logger.info("DB Disconnected")
+    except Exception as e:
+        logger.error(f"Error during shutdown: {str(e)}")
+    
+    logger.info("SHUTDOWN COMPLETE")
 
 
 
 app = FastAPI(
     title="AutoDiag - Diagnosis Service API",
     version="1.0.0",
+    lifespan=lifespan,  
 
 )
+
 
 
 
@@ -76,6 +90,7 @@ app.add_middleware(
 
 
 
+
 setup_error_handlers(app)
 
 
@@ -88,12 +103,15 @@ setup_error_handlers(app)
     response_description="Estado del servicio"
 )
 async def health_check():
-
+    from app.infrastructure.config.database import check_database_health
+    
+    db_health = await check_database_health()
+    
     return {
-        "status": "healthy",
+        "status": "healthy" if db_health["status"] == "healthy" else "degraded",
         "service": "diagnosis-service",
         "version": "1.0.0",
-        "environment": settings.NODE_ENV
+        "database": db_health
     }
 
 
@@ -104,19 +122,16 @@ async def health_check():
     description="Información básica del servicio"
 )
 async def root():
-
     return {
         "service": "AutoDiag - Diagnosis Service",
         "version": "1.0.0",
-
+        "docs": "/docs",
+        "health": "/health"
     }
-
-
 
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-
     logger.error(f"Unhandled exception: {str(exc)}", exc_info=True)
     
     error_message = "Internal server error"
@@ -129,7 +144,6 @@ async def global_exception_handler(request: Request, exc: Exception):
             "statusCode": 500
         }
     )
-
 
 
 
@@ -165,11 +179,12 @@ app.include_router(
 
 
 
+
 if __name__ == "__main__":
     import uvicorn
     
     uvicorn.run(
-        "main:app",
+        "app.main:app", 
         host="0.0.0.0",
         port=settings.PORT,
         reload=False, 

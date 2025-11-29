@@ -1,11 +1,13 @@
 
 
-from .settings import settings, Settings
-from .database import DatabaseConnection, get_db
+from .settings import settings, Settings, get_settings
+from .database import get_prisma_client, initialize_database, close_database
 
 __all__ = [
     "settings",
     "Settings",
-    "DatabaseConnection",
-    "get_db",
+    "get_settings",
+    "get_prisma_client",
+    "initialize_database",
+    "close_database",
 ]

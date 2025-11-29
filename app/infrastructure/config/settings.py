@@ -2,11 +2,11 @@
 
 from pydantic_settings import BaseSettings
 from typing import Optional
+from functools import lru_cache
 
 
 class Settings(BaseSettings):
 
-    
     PORT: int = 3004
     
     DATABASE_URL: str
@@ -29,7 +29,14 @@ class Settings(BaseSettings):
     
     @property
     def cors_origins(self) -> list[str]:
+
         return [origin.strip() for origin in self.ALLOWED_ORIGINS.split(",")]
 
 
-settings = Settings()
+@lru_cache()
+def get_settings() -> Settings:
+
+    return Settings()
+
+
+settings = get_settings()

@@ -1,43 +1,26 @@
-# ============================================
-# REQUIREMENTS - MVP VERSION (Python 3.13 compatible)
-# Versiones actualizadas con wheels pre-compilados
-# ============================================
 
-# FastAPI core
 fastapi==0.115.5
 uvicorn[standard]==0.32.1
-pydantic==2.10.3           # ✅ ACTUALIZADO (tiene wheels para Python 3.13)
-pydantic-settings==2.6.1   # ✅ ACTUALIZADO
+pydantic==2.10.3
+pydantic-settings==2.6.1
+
 
 prisma==0.15.0
 
-# Redis (for Pub/Sub events)
-redis==5.2.1               # ✅ ACTUALIZADO
+redis==5.2.1
 
-# AI - Gemini API
-google-generativeai==0.8.3 # ✅ ACTUALIZADO
 
-# Utils
-python-multipart==0.0.20   # ✅ ACTUALIZADO
+google-generativeai==0.8.3
+
+transformers==4.46.3
+torch==2.5.1
+
+httpx==0.28.1
+
+
+python-multipart==0.0.20
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
-python-dotenv==1.0.1       # ✅ ACTUALIZADO
-httpx==0.28.1              # ✅ ACTUALIZADO
 
-# ============================================
-# ML DEPENDENCIES (Para proyecto final - 20 Nov)
-# Descomentar después del MVP 1
-# ============================================
+python-dotenv==1.0.1
 
-# # Scikit-learn (Clasificador)
-# scikit-learn==1.6.0
-# joblib==1.4.2
-
-# # NLP (BERT para sentimientos)
-# transformers==4.47.1
-# torch==2.5.1
-# sentencepiece==0.2.0
-
-# # Data processing
-# pandas==2.2.3
-# numpy==2.2.1

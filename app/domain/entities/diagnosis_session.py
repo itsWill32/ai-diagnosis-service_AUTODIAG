@@ -2,21 +2,14 @@
 from datetime import datetime
 from typing import Optional
 from uuid import UUID
-from enum import Enum
 
-from ..value_objects import SessionId, MessageRole
+from ..value_objects import SessionId, SessionStatus, MessageRole
 from ..exceptions import (
     SessionNotActiveException,
     InvalidSessionStatusException,
     InsufficientMessagesException,
 )
 from .diagnosis_message import DiagnosisMessage
-
-
-class SessionStatus(str, Enum):
-    ACTIVE = "ACTIVE"
-    COMPLETED = "COMPLETED"
-    ABANDONED = "ABANDONED"
 
 
 class DiagnosisSession:
@@ -68,7 +61,6 @@ class DiagnosisSession:
             messages=[first_message],
         )
     
-    
     @property
     def id(self) -> SessionId:
         return self._session_id
@@ -101,9 +93,7 @@ class DiagnosisSession:
     def completed_at(self) -> Optional[datetime]:
         return self._completed_at
     
-    
     def add_message(self, message: DiagnosisMessage) -> None:
-        
         if not self.is_active():
             raise SessionNotActiveException(
                 session_id=str(self._session_id.value),
@@ -113,7 +103,6 @@ class DiagnosisSession:
         self._messages.append(message)
     
     def complete(self, summary: Optional[str] = None) -> None:
-        
         if self._status != SessionStatus.ACTIVE:
             raise InvalidSessionStatusException(
                 current_status=self._status.value,
@@ -125,7 +114,6 @@ class DiagnosisSession:
         self._completed_at = datetime.utcnow()
     
     def abandon(self) -> None:
-        
         if self._status != SessionStatus.ACTIVE:
             raise InvalidSessionStatusException(
                 current_status=self._status.value,
@@ -157,7 +145,6 @@ class DiagnosisSession:
         return len(self.get_user_messages()) >= self.MIN_MESSAGES_FOR_CLASSIFICATION
     
     def validate_can_classify(self) -> None:
-        
         if not self.has_enough_messages_for_classification():
             raise InsufficientMessagesException(
                 session_id=str(self._session_id.value),
@@ -166,7 +153,6 @@ class DiagnosisSession:
             )
     
     def get_conversation_text(self) -> str:
-        
         texts = []
         for message in self._messages:
             role_prefix = "Usuario" if message.is_user_message() else "Asistente"
@@ -197,8 +183,7 @@ class DiagnosisSession:
         started_at: datetime,
         completed_at: Optional[datetime],
     ) -> "DiagnosisSession":
-        """Reconstruye la entidad desde primitivos"""
-        
+        """Reconstruct entity from primitives."""
         return DiagnosisSession(
             session_id=SessionId(UUID(session_id)),
             user_id=UUID(user_id),

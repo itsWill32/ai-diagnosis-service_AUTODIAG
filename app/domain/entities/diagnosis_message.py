@@ -16,7 +16,6 @@ from ..exceptions import (
 
 
 class Attachment:
-    """Value Object para attachments de mensajes"""
     
     MAX_ATTACHMENTS = 3
     
@@ -82,7 +81,6 @@ class DiagnosisMessage:
         content: str,
         attachments: Optional[list[dict]] = None,
     ) -> "DiagnosisMessage":
-        """Factory method para crear un nuevo mensaje"""
         
         message_id = MessageId.generate()
         message_content = MessageContent(content)
@@ -153,7 +151,6 @@ class DiagnosisMessage:
         attachments: list[dict],
         timestamp: datetime,
     ) -> "DiagnosisMessage":
-        """Reconstruye la entidad desde primitivos"""
         
         attachment_objects = [
             Attachment.from_dict(att) for att in attachments

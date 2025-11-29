@@ -22,25 +22,18 @@ from app.infrastructure.api.routers.schemas import (
 )
 
 from app.infrastructure.repositories import PrismaDiagnosisSessionRepository
-
 from app.infrastructure.services import GeminiService
-
 from app.infrastructure.clients import VehicleServiceClient
 
 
 router = APIRouter()
 
 
-
 @router.get(
     "",
     response_model=List[SessionResponse],
     summary="Listar sesiones del usuario",
-    description="Retorna historial de diagnósticos del usuario autenticado",
-    responses={
-        200: {"description": "Lista de sesiones"},
-        401: {"model": ErrorResponse, "description": "No autenticado"}
-    }
+    description="Retorna historial de diagnósticos del usuario autenticado"
 )
 async def get_user_sessions(
     vehicleId: Optional[str] = Query(None, description="Filtrar por vehículo específico"),
@@ -48,13 +41,13 @@ async def get_user_sessions(
     user: Dict[str, Any] = Depends(get_current_vehicle_owner),
     repo: PrismaDiagnosisSessionRepository = Depends(get_diagnosis_session_repository)
 ):
-
     user_id = user["userId"]
     
-    sessions = await repo.find_by_user_id(user_id, limit=limit)
-    
-    if vehicleId:
-        sessions = [s for s in sessions if s.vehicle_id == vehicleId]
+    sessions = await repo.find_by_user_id(
+        user_id=user_id,
+        vehicle_id=vehicleId,
+        limit=limit
+    )
     
     return [
         SessionResponse(
@@ -71,20 +64,11 @@ async def get_user_sessions(
     ]
 
 
-
-
 @router.post(
     "",
     response_model=ChatResponse,
     status_code=201,
-    summary="Iniciar nueva sesión de diagnóstico",
-    description="Crea una nueva conversación con el chatbot de IA",
-    responses={
-        201: {"description": "Sesión creada exitosamente"},
-        400: {"model": ErrorResponse, "description": "Datos inválidos"},
-        401: {"model": ErrorResponse, "description": "No autenticado"},
-        404: {"model": ErrorResponse, "description": "Vehículo no encontrado"}
-    }
+    summary="Iniciar nueva sesión de diagnóstico"
 )
 async def create_diagnosis_session(
     data: StartSessionRequest,
@@ -93,7 +77,6 @@ async def create_diagnosis_session(
     gemini: GeminiService = Depends(get_gemini_service),
     vehicle_client: VehicleServiceClient = Depends(get_vehicle_client)
 ):
-
     from app.domain.entities.diagnosis_session import DiagnosisSession
     from app.domain.entities.diagnosis_message import DiagnosisMessage
     from app.domain.value_objects.session_status import SessionStatus
@@ -104,27 +87,24 @@ async def create_diagnosis_session(
     user_id = user["userId"]
     vehicle_id = data.vehicleId
     
-    auth_token = f"Bearer {user.get('token', '')}"  
+    auth_token = f"Bearer {user.get('token', '')}"
     
-    vehicle = await vehicle_client.get_vehicle(
-        vehicle_id=vehicle_id,
-        user_id=user_id,
-        auth_token=auth_token
-    )
-    
-    if not vehicle:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Vehículo {vehicle_id} no encontrado o no pertenece al usuario"
+    try:
+        vehicle = await vehicle_client.get_vehicle(
+            vehicle_id=vehicle_id,
+            user_id=user_id,
+            auth_token=auth_token
         )
+    except Exception as e:
+        pass
     
     session = DiagnosisSession(
         id=uuid4(),
         user_id=UUID(user_id),
         vehicle_id=UUID(vehicle_id),
         status=SessionStatus.ACTIVE,
-        started_at=datetime.utcnow(),
-        messages=[]
+        messages=[],
+        started_at=datetime.utcnow()
     )
     
     user_message = DiagnosisMessage(
@@ -158,7 +138,7 @@ async def create_diagnosis_session(
     
     session.add_message(assistant_message)
     
-    saved_session = await repo.create(session)
+    await repo.create(session)
     
     return ChatResponse(
         userMessage=MessageResponse(
@@ -179,24 +159,17 @@ async def create_diagnosis_session(
     )
 
 
-
 @router.get(
     "/{sessionId}",
     response_model=SessionDetailResponse,
-    summary="Obtener sesión de diagnóstico",
-    description="Retorna información completa de una sesión",
-    responses={
-        200: {"description": "Sesión encontrada"},
-        404: {"model": ErrorResponse, "description": "Sesión no encontrada"},
-        401: {"model": ErrorResponse, "description": "No autenticado"}
-    }
+    summary="Obtener sesión de diagnóstico"
 )
 async def get_session_by_id(
     sessionId: str,
     user: Dict[str, Any] = Depends(get_current_user),
     repo: PrismaDiagnosisSessionRepository = Depends(get_diagnosis_session_repository)
 ):
-
+    """Get session by ID."""
     user_id = user["userId"]
     
     session = await repo.find_by_id(UUID(sessionId))
@@ -212,7 +185,6 @@ async def get_session_by_id(
             status_code=403,
             detail="No tienes acceso a esta sesión"
         )
-   
     
     return SessionDetailResponse(
         id=str(session.id),
@@ -224,31 +196,23 @@ async def get_session_by_id(
         messagesCount=len(session.messages),
         summary=session.summary,
         classification=None,
-        urgency=None,  
-        costEstimate=None,  
-        recommendations=[]  
+        urgency=None,
+        costEstimate=None,
+        recommendations=[]
     )
-
-
 
 
 @router.get(
     "/{sessionId}/messages",
     response_model=List[MessageResponse],
-    summary="Obtener mensajes de la sesión",
-    description="Retorna historial completo de la conversación",
-    responses={
-        200: {"description": "Mensajes de la sesión"},
-        404: {"model": ErrorResponse, "description": "Sesión no encontrada"},
-        401: {"model": ErrorResponse, "description": "No autenticado"}
-    }
+    summary="Obtener mensajes de la sesión"
 )
 async def get_session_messages(
     sessionId: str,
     user: Dict[str, Any] = Depends(get_current_user),
     repo: PrismaDiagnosisSessionRepository = Depends(get_diagnosis_session_repository)
 ):
-
+    """Get all messages from a session."""
     user_id = user["userId"]
     
     session = await repo.find_by_id(UUID(sessionId))
@@ -277,19 +241,10 @@ async def get_session_messages(
     ]
 
 
-
-
 @router.post(
     "/{sessionId}/messages",
     response_model=ChatResponse,
-    summary="Enviar mensaje al chatbot",
-    description="Envía un mensaje del usuario y recibe respuesta de la IA",
-    responses={
-        200: {"description": "Mensaje procesado"},
-        400: {"model": ErrorResponse, "description": "Datos inválidos"},
-        404: {"model": ErrorResponse, "description": "Sesión no encontrada"},
-        401: {"model": ErrorResponse, "description": "No autenticado"}
-    }
+    summary="Enviar mensaje al chatbot"
 )
 async def send_message(
     sessionId: str,
@@ -298,7 +253,6 @@ async def send_message(
     repo: PrismaDiagnosisSessionRepository = Depends(get_diagnosis_session_repository),
     gemini: GeminiService = Depends(get_gemini_service)
 ):
-
     from app.domain.entities.diagnosis_message import DiagnosisMessage
     from app.domain.value_objects.message_role import MessageRole
     from app.domain.value_objects.session_status import SessionStatus

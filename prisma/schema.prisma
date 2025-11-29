@@ -1,8 +1,9 @@
-// This is your Prisma schema file for Diagnosis Service (Python)
-// Learn more: https://pris.ly/d/prisma-schema
+// AutoDiag - Diagnosis Service
+// Prisma Schema - ALIGNED WITH CURRENT DOMAIN ENTITIES
+// Architecture: Classification, Urgency, Cost are SEPARATE concerns
 
 generator client {
-  provider = "prisma-client-py"
+  provider             = "prisma-client-py"
   recursive_type_depth = 5
 }
 
@@ -12,203 +13,221 @@ datasource db {
 }
 
 // ============================================
-// DIAGNOSIS SERVICE MODELS
+// DIAGNOSIS SESSION (Chat con IA)
 // ============================================
 
-model Diagnosis {
+model DiagnosisSession {
   id          String   @id @default(uuid())
   
-  // User and vehicle
-  userId      String   // FK to Auth Service
-  vehicleId   String   // FK to Vehicle Service
+  // Foreign Keys
+  userId      String
+  vehicleId   String
   
-  // Diagnosis details
-  symptoms    String[] // Array of symptoms described
-  diagnosis   String   // AI-generated diagnosis
+  // Session state
+  status      SessionStatus @default(ACTIVE)
   
-  // Urgency classification
-  urgency     UrgencyLevel
-  urgencyScore Float   // 0-1 score from ML model
+  // Conversation
+  messages    DiagnosisMessage[]
   
-  // Recommended actions
-  recommendations String[]
+  // AI summary (optional)
+  summary     String?
   
-  // Cost estimation
-  estimatedCostMin Float?
-  estimatedCostMax Float?
+  // Related classification (one-to-one)
+  classification    ProblemClassification?
   
-  // Parts that may be needed
-  estimatedParts String[]
-  
-  // Time estimation
-  estimatedTimeMin Int? // Minutes
-  estimatedTimeMax Int? // Minutes
-  
-  // Safety warning
-  safetyWarning String?
-  canDrive      Boolean @default(true)
-  
-  // ML Model info
-  modelVersion  String?
-  confidence    Float?  // 0-1 confidence score
-  
-  // Conversation history
-  conversations DiagnosisConversation[]
-  
-  // Media
-  photos        String[] // URLs to uploaded photos
-  audioFiles    String[] // URLs to audio descriptions
-  
-  // Status
-  isCompleted   Boolean  @default(false)
+  // Related recommendations (one-to-many)
+  recommendations   WorkshopRecommendation[]
   
   // Timestamps
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+  updatedAt   DateTime  @updatedAt
   
   @@index([userId])
   @@index([vehicleId])
-  @@index([urgency])
-  @@index([createdAt])
-  @@map("diagnoses")
+  @@index([status])
+  @@index([startedAt])
+  @@map("diagnosis_sessions")
 }
 
-enum UrgencyLevel {
-  LOW       // Verde - Puede esperar
-  MEDIUM    // Amarillo - Atender pronto
-  HIGH      // Naranja - Atender esta semana
-  CRITICAL  // Rojo - Atender inmediatamente
-}
-
-// ============================================
-// DIAGNOSIS CONVERSATION (Chat History)
-// ============================================
-
-model DiagnosisConversation {
-  id          String   @id @default(uuid())
-  diagnosisId String
-  diagnosis   Diagnosis @relation(fields: [diagnosisId], references: [id], onDelete: Cascade)
-  
-  // Message
-  role        String   // 'user' | 'assistant' | 'system'
-  content     String
-  
-  // Metadata
-  tokens      Int?     // Token count
-  modelUsed   String?  // Gemini model version
-  
-  // Timestamps
-  createdAt   DateTime @default(now())
-  
-  @@index([diagnosisId])
-  @@index([createdAt])
-  @@map("diagnosis_conversations")
+enum SessionStatus {
+  ACTIVE
+  COMPLETED
+  ABANDONED
 }
 
 // ============================================
-// DIAGNOSIS SENTIMENT ANALYSIS
+// DIAGNOSIS MESSAGE (Chat messages)
 // ============================================
 
-model DiagnosisSentiment {
-  id          String   @id @default(uuid())
-  diagnosisId String   @unique
-  
-  // Sentiment scores (0-1)
-  urgencyScore    Float  // How urgent does the user feel?
-  frustrationScore Float // How frustrated is the user?
-  clarityScore    Float  // How clear is the description?
-  
-  // Extracted emotions
-  emotions        String[] // ['worried', 'confused', 'calm', etc.]
-  
-  // Keywords extracted
-  technicalTerms  String[]
-  commonWords     String[]
-  
-  // Language quality
-  languageQuality String // 'clear' | 'vague' | 'technical'
-  
-  // Timestamps
-  createdAt       DateTime @default(now())
-  
-  @@index([diagnosisId])
-  @@map("diagnosis_sentiments")
-}
-
-// ============================================
-// DIAGNOSTIC CODES (OBD-II codes, etc.)
-// ============================================
-
-model DiagnosticCode {
+model DiagnosisMessage {
   id          String   @id @default(uuid())
   
-  // Code details
-  code        String   @unique // e.g., "P0420"
-  system      String   // "Powertrain", "Body", "Chassis", "Network"
-  category    String   // "Fuel", "Ignition", "Emission", etc.
-  description String
+  sessionId   String
+  session     DiagnosisSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   
-  // Severity
-  severity    UrgencyLevel
+  role        MessageRole
+  content     String   @db.Text
   
-  // Common causes
-  commonCauses String[]
+  attachments Json?
   
-  // Recommended fixes
-  recommendedFixes String[]
+  timestamp   DateTime @default(now())
   
-  // Average costs
-  avgCostMin  Float?
-  avgCostMax  Float?
-  
-  // Timestamps
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  @@index([code])
-  @@index([system])
-  @@map("diagnostic_codes")
+  @@index([sessionId])
+  @@index([timestamp])
+  @@map("diagnosis_messages")
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
 }
 
 // ============================================
-// KNOWLEDGE BASE (FAQ / Common Issues)
+// PROBLEM CLASSIFICATION (ML Classifier ONLY)
 // ============================================
+// NOTE: Urgency and Cost are NOT stored here.
+// They are calculated on-demand by separate services.
+// This follows SRP (Single Responsibility Principle).
 
-model KnowledgeBase {
+model ProblemClassification {
   id          String   @id @default(uuid())
   
-  // Issue details
-  title       String
-  description String
+  // Parent session (one-to-one)
+  sessionId   String   @unique
+  session     DiagnosisSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  
+  // ML Classification Results ONLY
+  category    ProblemCategory
+  subcategory String?
+  
+  // ML Confidence
+  confidenceScore Float  // 0.0 to 1.0
+  
+  // Detected symptoms
   symptoms    String[]
   
-  // Solution
-  solution    String
-  preventiveMeasures String[]
-  
-  // Related codes
-  relatedCodes String[]
-  
-  // Costs
-  typicalCost Float?
-  
-  // Difficulty
-  repairDifficulty String // 'easy' | 'medium' | 'hard' | 'professional'
-  
-  // Tags for search
-  tags        String[]
-  
-  // Usage stats
-  viewCount   Int      @default(0)
-  helpfulCount Int     @default(0)
-  
-  // Status
-  isPublished Boolean  @default(true)
-  
-  // Timestamps
+  // Timestamp
   createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
   
-  @@index([tags])
-  @@map("knowledge_base")
+  @@index([sessionId])
+  @@index([category])
+  @@index([createdAt])
+  @@map("problem_classifications")
+}
+
+enum ProblemCategory {
+  ENGINE
+  TRANSMISSION
+  BRAKES
+  ELECTRICAL
+  AIR_CONDITIONING
+  SUSPENSION
+  EXHAUST
+  FUEL_SYSTEM
+  COOLING_SYSTEM
+  TIRES
+  BATTERY
+  LIGHTS
+  OTHER
+}
+
+// ============================================
+// WORKSHOP RECOMMENDATION (ML Recommender)
+// ============================================
+
+model WorkshopRecommendation {
+  id          String   @id @default(uuid())
+  
+  sessionId   String
+  session     DiagnosisSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  
+  workshopId  String
+  
+  matchScore  Float    // 0.0 to 1.0
+  
+  reasons     String[]
+  
+  // Cached workshop metadata
+  workshopName String
+  distanceKm   Float?
+  rating       Float?
+  
+  createdAt   DateTime @default(now())
+  
+  @@index([sessionId])
+  @@index([workshopId])
+  @@index([matchScore])
+  @@map("workshop_recommendations")
+}
+
+// ============================================
+// SENTIMENT ANALYSIS (BERT NLP)
+// ============================================
+
+model SentimentAnalysis {
+  id          String   @id @default(uuid())
+  
+  text        String   @db.Text
+  
+  context     Json?
+  
+  label       SentimentLabel
+  score       Float    // 0.0 to 1.0
+  
+  scores      Json     // {positive, neutral, negative}
+  
+  analyzedAt  DateTime @default(now())
+  
+  @@index([label])
+  @@index([analyzedAt])
+  @@map("sentiment_analyses")
+}
+
+enum SentimentLabel {
+  POSITIVE
+  NEUTRAL
+  NEGATIVE
+}
+
+// ============================================
+// ANALYTICS METRICS (Admin Dashboard)
+// ============================================
+
+model AnalyticsMetric {
+  id          String   @id @default(uuid())
+  
+  metricType  String
+  
+  value       Json
+  
+  period      String?
+  periodDate  DateTime?
+  
+  createdAt   DateTime @default(now())
+  
+  @@index([metricType])
+  @@index([periodDate])
+  @@map("analytics_metrics")
+}
+
+// ============================================
+// ML MODEL METRICS (Performance Tracking)
+// ============================================
+
+model MLModelMetric {
+  id          String   @id @default(uuid())
+  
+  modelName    String
+  modelVersion String
+  
+  metrics     Json
+  
+  sampleSize  Int?
+  
+  createdAt   DateTime @default(now())
+  
+  @@index([modelName])
+  @@index([createdAt])
+  @@map("ml_model_metrics")
 }

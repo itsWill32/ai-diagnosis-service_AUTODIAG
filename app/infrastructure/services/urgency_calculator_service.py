@@ -1,92 +1,70 @@
-
-
 from typing import List, Tuple
 from app.domain.entities import ProblemClassification
 from app.domain.value_objects import UrgencyLevel, ProblemCategory
+from app.domain.value_objects.problem_category import ProblemCategoryEnum
 
 
 class UrgencyCalculatorService:
-
     
     def __init__(self):
 
-        # CATEGORÍAS CRÍTICAS (peligro inmediato)
         self.critical_categories = [
-            ProblemCategory.BRAKES,         
-            ProblemCategory.SUSPENSION,     
+            ProblemCategoryEnum.BRAKES,         
+            ProblemCategoryEnum.SUSPENSION, 
+            ProblemCategoryEnum.STEERING,    
         ]
         
-        # CATEGORÍAS DE ALTA URGENCIA
         self.high_urgency_categories = [
-            ProblemCategory.ENGINE,         
-            ProblemCategory.TRANSMISSION,   
-            ProblemCategory.COOLING_SYSTEM, 
-            ProblemCategory.FUEL_SYSTEM,    
+            ProblemCategoryEnum.ENGINE,         
+            ProblemCategoryEnum.TRANSMISSION,   
+            ProblemCategoryEnum.COOLING_SYSTEM, 
+            ProblemCategoryEnum.FUEL_SYSTEM,    
         ]
         
-        # CATEGORÍAS DE URGENCIA MEDIA
         self.medium_urgency_categories = [
-            ProblemCategory.EXHAUST,
-            ProblemCategory.ELECTRICAL,
-            ProblemCategory.AIR_CONDITIONING,
-            ProblemCategory.BATTERY,
+            ProblemCategoryEnum.EXHAUST,
+            ProblemCategoryEnum.ELECTRICAL,
+            ProblemCategoryEnum.AIR_CONDITIONING,
+            ProblemCategoryEnum.BATTERY,
         ]
         
-        # CATEGORÍAS DE BAJA URGENCIA
         self.low_urgency_categories = [
-            ProblemCategory.LIGHTS,
-            ProblemCategory.TIRES,
-            ProblemCategory.OTHER,
+            ProblemCategoryEnum.LIGHTS,
+            ProblemCategoryEnum.TIRES,
+            ProblemCategoryEnum.OTHER,
         ]
         
-        # SÍNTOMAS QUE ELEVAN LA URGENCIA A CRITICAL
         self.critical_symptoms = [
-            "freno",
-            "frenos",
-            "pedal",
-            "no frena",
-            "se hunde",
-            "vibra al frenar",
-            "chirrido al frenar",
-            "humo",
-            "fuego",
-            "sobrecalienta",
-            "temperatura alta",
-            "pierde dirección",
-            "volante duro",
-            "no gira",
-            "rueda bloqueada",
+            "freno", "frenos", "pedal", "no frena", "se hunde",
+            "vibra al frenar", "chirrido al frenar", "humo", "fuego",
+            "sobrecalienta", "temperatura alta", "pierde dirección",
+            "volante duro", "no gira", "rueda bloqueada",
         ]
         
-        # SÍNTOMAS QUE ELEVAN LA URGENCIA A HIGH
         self.high_urgency_symptoms = [
-            "fuga",
-            "gotea",
-            "mancha",
-            "olor a quemado",
-            "humea",
-            "vibración fuerte",
-            "ruido metálico",
-            "no arranca",
-            "se apaga",
-            "pierde potencia",
+            "fuga", "gotea", "mancha", "olor a quemado", "humea",
+            "vibración fuerte", "ruido metálico", "no arranca",
+            "se apaga", "pierde potencia",
         ]
     
     def calculate_urgency(
         self,
         classification: ProblemClassification
     ) -> Tuple[UrgencyLevel, str, bool, int]:
-        category = classification.category
+        
+        category_vo = classification.category
+        category_enum = category_vo.value
+        
         symptoms = classification.symptoms
         
-        if category in self.critical_categories:
+        if category_enum in self.critical_categories:
             return self._create_critical_urgency()
         
         if self._has_critical_symptoms(symptoms):
             return self._create_critical_urgency()
         
-        if category in self.high_urgency_categories:
-            if self._has_critical_symptoms_for_category(category, symptoms):
+        if category_enum in self.high_urgency_categories:
+            if self._has_critical_symptoms_for_category(category_enum, symptoms):
                 return self._create_critical_urgency()
             
             if self._has_high_urgency_symptoms(symptoms):
@@ -94,15 +72,13 @@ class UrgencyCalculatorService:
             
             return self._create_high_urgency_moderate()
         
-        if category in self.medium_urgency_categories:
+        if category_enum in self.medium_urgency_categories:
             return self._create_medium_urgency()
         
         return self._create_low_urgency()
     
     def _has_critical_symptoms(self, symptoms: List[str]) -> bool:
-
         symptoms_text = " ".join(symptoms).lower()
-        
         return any(
             critical_symptom in symptoms_text
             for critical_symptom in self.critical_symptoms
@@ -110,42 +86,37 @@ class UrgencyCalculatorService:
     
     def _has_critical_symptoms_for_category(
         self,
-        category: ProblemCategory,
+        category: ProblemCategoryEnum, 
         symptoms: List[str]
     ) -> bool:
-
         symptoms_text = " ".join(symptoms).lower()
         
-        if category == ProblemCategory.ENGINE:
+        if category == ProblemCategoryEnum.ENGINE:
             if any(s in symptoms_text for s in ["sobrecalienta", "temperatura alta", "humo"]):
                 return True
         
-        if category == ProblemCategory.TRANSMISSION:
+        if category == ProblemCategoryEnum.TRANSMISSION:
             if any(s in symptoms_text for s in ["no entra", "patina", "se atora"]):
                 return True
         
-        if category == ProblemCategory.FUEL_SYSTEM:
+        if category == ProblemCategoryEnum.FUEL_SYSTEM:
             if any(s in symptoms_text for s in ["fuga", "gotea", "olor a gasolina"]):
                 return True
         
-        if category == ProblemCategory.COOLING_SYSTEM:
+        if category == ProblemCategoryEnum.COOLING_SYSTEM:
             if any(s in symptoms_text for s in ["temperatura alta", "sobrecalienta"]):
                 return True
         
         return False
     
     def _has_high_urgency_symptoms(self, symptoms: List[str]) -> bool:
-
         symptoms_text = " ".join(symptoms).lower()
-        
         return any(
             symptom in symptoms_text
             for symptom in self.high_urgency_symptoms
         )
     
-    
     def _create_critical_urgency(self) -> Tuple[UrgencyLevel, str, bool, int]:
-
         return (
             UrgencyLevel.CRITICAL,
             "URGENTE: Problema crítico de seguridad. NO conduzca el vehículo. "
@@ -156,7 +127,6 @@ class UrgencyCalculatorService:
         )
     
     def _create_high_urgency(self) -> Tuple[UrgencyLevel, str, bool, int]:
-
         return (
             UrgencyLevel.HIGH,
             "ATENCIÓN URGENTE: Problema que puede empeorar rápidamente o causar "
@@ -167,7 +137,6 @@ class UrgencyCalculatorService:
         )
     
     def _create_high_urgency_moderate(self) -> Tuple[UrgencyLevel, str, bool, int]:
-
         return (
             UrgencyLevel.HIGH,
             "ALTA PRIORIDAD: Problema que requiere atención pronto. Puede seguir "
@@ -178,7 +147,6 @@ class UrgencyCalculatorService:
         )
     
     def _create_medium_urgency(self) -> Tuple[UrgencyLevel, str, bool, int]:
-
         return (
             UrgencyLevel.MEDIUM,
             "PROGRAMAR SERVICIO: Problema que debe atenderse en las próximas "
@@ -189,7 +157,6 @@ class UrgencyCalculatorService:
         )
     
     def _create_low_urgency(self) -> Tuple[UrgencyLevel, str, bool, int]:
-
         return (
             UrgencyLevel.LOW,
             "MANTENIMIENTO PREVENTIVO: Problema menor que puede atenderse cuando "

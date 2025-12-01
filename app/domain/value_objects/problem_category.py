@@ -1,25 +1,24 @@
-
 from dataclasses import dataclass
 from enum import Enum
 from typing import List
 
 
 class ProblemCategoryEnum(str, Enum):
-
     
-    ENGINE = "ENGINE"                      # Motor
-    TRANSMISSION = "TRANSMISSION"          # Transmisión
-    BRAKES = "BRAKES"                      # Frenos
-    ELECTRICAL = "ELECTRICAL"              # Sistema eléctrico
-    AIR_CONDITIONING = "AIR_CONDITIONING"  # Aire acondicionado
-    SUSPENSION = "SUSPENSION"              # Suspensión
-    EXHAUST = "EXHAUST"                    # Sistema de escape
-    FUEL_SYSTEM = "FUEL_SYSTEM"            # Sistema de combustible
-    COOLING_SYSTEM = "COOLING_SYSTEM"      # Sistema de enfriamiento
-    TIRES = "TIRES"                        # Llantas
-    BATTERY = "BATTERY"                    # Batería
-    LIGHTS = "LIGHTS"                      # Luces
-    OTHER = "OTHER"                        # Otros
+    ENGINE = "ENGINE"                      
+    TRANSMISSION = "TRANSMISSION"          
+    BRAKES = "BRAKES"                      
+    ELECTRICAL = "ELECTRICAL"              
+    AIR_CONDITIONING = "AIR_CONDITIONING"  
+    SUSPENSION = "SUSPENSION"              
+    STEERING = "STEERING"                  
+    EXHAUST = "EXHAUST"                    
+    FUEL_SYSTEM = "FUEL_SYSTEM"            
+    COOLING_SYSTEM = "COOLING_SYSTEM"      
+    TIRES = "TIRES"                        
+    BATTERY = "BATTERY"                    
+    LIGHTS = "LIGHTS"                      
+    OTHER = "OTHER"                        
     
     @classmethod
     def get_description(cls, category: 'ProblemCategoryEnum') -> str:
@@ -30,6 +29,7 @@ class ProblemCategoryEnum(str, Enum):
             cls.ELECTRICAL: "Sistema Eléctrico",
             cls.AIR_CONDITIONING: "Aire Acondicionado",
             cls.SUSPENSION: "Suspensión",
+            cls.STEERING: "Dirección",
             cls.EXHAUST: "Sistema de Escape",
             cls.FUEL_SYSTEM: "Sistema de Combustible",
             cls.COOLING_SYSTEM: "Sistema de Enfriamiento",
@@ -47,12 +47,18 @@ class ProblemCategoryEnum(str, Enum):
 
 @dataclass(frozen=True)
 class ProblemCategory:
-
     
     value: ProblemCategoryEnum
     
     def __post_init__(self):
         if not isinstance(self.value, ProblemCategoryEnum):
+            if isinstance(self.value, str):
+                try:
+                    object.__setattr__(self, 'value', ProblemCategoryEnum(self.value))
+                    return
+                except ValueError:
+                    pass
+            
             raise ValueError(
                 f"ProblemCategory debe ser un valor del enum ProblemCategoryEnum, "
                 f"recibido: {type(self.value)}"
@@ -60,16 +66,19 @@ class ProblemCategory:
     
     @classmethod
     def from_string(cls, category_str: str) -> 'ProblemCategory':
-
         try:
-            category_enum = ProblemCategoryEnum[category_str.upper()]
+            category_enum = ProblemCategoryEnum(category_str)
             return cls(value=category_enum)
-        except KeyError:
-            valid_categories = ", ".join(ProblemCategoryEnum.get_all_categories())
-            raise ValueError(
-                f"Categoría inválida: '{category_str}'. "
-                f"Categorías válidas: {valid_categories}"
-            )
+        except ValueError:
+            try:
+                category_enum = ProblemCategoryEnum[category_str.upper()]
+                return cls(value=category_enum)
+            except KeyError:
+                valid_categories = ", ".join(ProblemCategoryEnum.get_all_categories())
+                raise ValueError(
+                    f"Categoría inválida: '{category_str}'. "
+                    f"Categorías válidas: {valid_categories}"
+                )
     
     def to_string(self) -> str:
         return self.value.value

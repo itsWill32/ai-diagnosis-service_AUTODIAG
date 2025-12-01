@@ -1,18 +1,18 @@
 import google.generativeai as genai
 from typing import List, Dict, Optional
 import json
+import re 
 
 from app.infrastructure.config import settings
 from app.domain.entities import DiagnosisSession
-
 
 class GeminiService:
     
     def __init__(self):
         """Inicializa el cliente de Gemini"""
         genai.configure(api_key=settings.GOOGLE_GEMINI_API_KEY)
-        
-        self.model = genai.GenerativeModel('gemini-1.5-flash-latest')  
+
+        self.model = genai.GenerativeModel('gemini-2.5-flash')  
         
         self.system_prompt = self._build_system_prompt()
     
@@ -65,19 +65,15 @@ TONO: Profesional, amigable y tranquilizador.
         """Genera respuesta del asistente usando Gemini"""
         conversation_history = self._build_conversation_history(session)
         
-        conversation_history.append({
-            "role": "user",
-            "parts": [user_message]
-        })
-        
+
         chat = self.model.start_chat(
             history=[
                 {"role": "user", "parts": [self.system_prompt]},
                 {"role": "model", "parts": ["Entendido. Estoy listo para ayudar con diagnósticos automotrices. ¿Cuál es el problema con tu vehículo?"]}
-            ] + conversation_history[:-1]  
+            ] + conversation_history 
         )
-        
-        response = chat.send_message(user_message)
+
+        response = await chat.send_message_async(user_message)
         assistant_response = response.text
         
         suggested_questions = await self._generate_suggested_questions(
@@ -86,7 +82,8 @@ TONO: Profesional, amigable y tranquilizador.
             assistant_response
         )
         
-        symptoms = self._extract_symptoms(session.get_conversation_text())
+        full_text_context = session.get_conversation_text() + " " + user_message
+        symptoms = self._extract_symptoms(full_text_context)
         
         return {
             "response": assistant_response,
@@ -114,12 +111,12 @@ Responde ÚNICAMENTE con un JSON array de 3 strings. Ejemplo:
 """
         
         try:
-            response = self.model.generate_content(prompt)
-            questions_json = response.text.strip()
+            response = await self.model.generate_content_async(prompt)
+            raw_text = response.text.strip()
             
-            questions_json = questions_json.replace("```json", "").replace("```", "").strip()
+            json_str = re.sub(r'```json|```', '', raw_text).strip()
             
-            questions = json.loads(questions_json)
+            questions = json.loads(json_str)
             
             if isinstance(questions, list) and len(questions) == 3:
                 return questions
@@ -133,15 +130,15 @@ Responde ÚNICAMENTE con un JSON array de 3 strings. Ejemplo:
     def _extract_symptoms(self, conversation_text: str) -> List[str]:
         """Extrae síntomas del texto de la conversación"""
         symptom_keywords = {
-            "Ruido anormal": ["ruido", "chirrido", "golpeteo", "zumbido", "rechinido"],
+            "Ruido anormal": ["ruido", "chirrido", "golpeteo", "zumbido", "rechinido", "trac"],
             "Vibración": ["vibración", "vibra", "tiembla", "sacude"],
-            "Fuga de líquidos": ["fuga", "gotea", "mancha", "líquido"],
-            "Luz de alerta": ["luz", "alerta", "tablero", "check engine", "testigo"],
+            "Fuga de líquidos": ["fuga", "gotea", "mancha", "líquido", "charco"],
+            "Luz de alerta": ["luz", "alerta", "tablero", "check engine", "testigo", "foco"],
             "Humo": ["humo", "humea", "vapor"],
-            "Olor anormal": ["olor", "huele", "quemado"],
-            "Dificultad al arrancar": ["arranca", "arranque", "enciende", "prende"],
-            "Pérdida de potencia": ["potencia", "acelera", "fuerza", "lento"],
-            "Sobrecalentamiento": ["temperatura", "calor", "sobrecalienta", "caliente"],
+            "Olor anormal": ["olor", "huele", "quemado", "gasolina"],
+            "Dificultad al arrancar": ["arranca", "arranque", "enciende", "prende", "marcha"],
+            "Pérdida de potencia": ["potencia", "acelera", "fuerza", "lento", "burro"],
+            "Sobrecalentamiento": ["temperatura", "calor", "sobrecalienta", "caliente", "aguja"],
             "Consumo excesivo": ["consume", "gasta", "combustible", "gasolina"],
         }
         
@@ -150,7 +147,8 @@ Responde ÚNICAMENTE con un JSON array de 3 strings. Ejemplo:
         
         for symptom, keywords in symptom_keywords.items():
             if any(keyword in conversation_lower for keyword in keywords):
-                detected_symptoms.append(symptom)
+                if symptom not in detected_symptoms:
+                    detected_symptoms.append(symptom)
         
         return detected_symptoms
     
@@ -170,7 +168,7 @@ Responde ÚNICAMENTE con un JSON array de 3 strings. Ejemplo:
     def _get_default_questions(self) -> List[str]:
         """Retorna preguntas por defecto si falla la generación"""
         return [
-            "¿Cuándo notaste el problema por primera vez?",
-            "¿El problema es constante o intermitente?",
-            "¿Hay algún ruido o luz de alerta?"
+            "¿Cuándo notaste el problema?",
+            "¿Es constante o intermitente?",
+            "¿Hay luces en el tablero?"
         ]

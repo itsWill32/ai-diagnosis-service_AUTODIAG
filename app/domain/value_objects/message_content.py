@@ -7,7 +7,7 @@ class MessageContent:
 
     value: str
     
-    MAX_LENGTH = 2000  
+    MAX_LENGTH = 5000  
     MIN_LENGTH = 1
     
     def __post_init__(self):

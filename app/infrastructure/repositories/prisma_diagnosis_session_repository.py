@@ -43,7 +43,7 @@ class PrismaDiagnosisSessionRepository(DiagnosisSessionRepository):
                     },
                     "role": msg.role.value,
                     "content": msg.content.value,
-                    "attachments": msg.attachments if msg.attachments else [],
+                    "attachments": [att.to_dict() for att in msg.attachments] if msg.attachments else [],
                     "timestamp": msg.timestamp,
                 }
             )
@@ -77,7 +77,7 @@ class PrismaDiagnosisSessionRepository(DiagnosisSessionRepository):
                         },
                         "role": msg.role.value,
                         "content": msg.content.value,
-                        "attachments": msg.attachments if msg.attachments else [],
+                        "attachments": [att.to_dict() for att in msg.attachments] if msg.attachments else [],
                         "timestamp": msg.timestamp,
                     }
                 )

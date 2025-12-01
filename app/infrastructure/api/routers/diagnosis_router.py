@@ -81,6 +81,7 @@ async def create_diagnosis_session(
     from app.domain.entities.diagnosis_message import DiagnosisMessage
     from app.domain.value_objects.session_status import SessionStatus
     from app.domain.value_objects.message_role import MessageRole
+    from app.domain.value_objects import SessionId  # ← AGREGAR
     from uuid import uuid4
     from datetime import datetime
     
@@ -98,8 +99,9 @@ async def create_diagnosis_session(
     except Exception as e:
         pass
     
+    # ✅ CORRECCIÓN: session_id en lugar de id
     session = DiagnosisSession(
-        id=uuid4(),
+        session_id=SessionId(uuid4()),  # ← CAMBIAR AQUÍ
         user_id=UUID(user_id),
         vehicle_id=UUID(vehicle_id),
         status=SessionStatus.ACTIVE,

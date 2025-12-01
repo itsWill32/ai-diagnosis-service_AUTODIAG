@@ -1,5 +1,3 @@
-
-
 from typing import List, Dict, Any, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from uuid import UUID
@@ -81,7 +79,7 @@ async def create_diagnosis_session(
     from app.domain.entities.diagnosis_message import DiagnosisMessage
     from app.domain.value_objects.session_status import SessionStatus
     from app.domain.value_objects.message_role import MessageRole
-    from app.domain.value_objects import SessionId  # ← AGREGAR
+    from app.domain.value_objects import SessionId
     from uuid import uuid4
     from datetime import datetime
     
@@ -99,9 +97,8 @@ async def create_diagnosis_session(
     except Exception as e:
         pass
     
-    # ✅ CORRECCIÓN: session_id en lugar de id
     session = DiagnosisSession(
-        session_id=SessionId(uuid4()),  # ← CAMBIAR AQUÍ
+        session_id=SessionId(uuid4()),
         user_id=UUID(user_id),
         vehicle_id=UUID(vehicle_id),
         status=SessionStatus.ACTIVE,
@@ -109,12 +106,10 @@ async def create_diagnosis_session(
         started_at=datetime.utcnow()
     )
     
-    user_message = DiagnosisMessage(
-        id=uuid4(),
-        session_id=session.id,
+    user_message = DiagnosisMessage.create(
+        session_id=session.id.value,
         role=MessageRole.USER,
-        content=data.initialMessage,
-        timestamp=datetime.utcnow()
+        content=data.initialMessage
     )
     
     session.add_message(user_message)
@@ -130,12 +125,10 @@ async def create_diagnosis_session(
             detail=f"AI service error: {str(e)}"
         )
     
-    assistant_message = DiagnosisMessage(
-        id=uuid4(),
-        session_id=session.id,
+    assistant_message = DiagnosisMessage.create(
+        session_id=session.id.value,
         role=MessageRole.ASSISTANT,
-        content=gemini_response["response"],
-        timestamp=datetime.utcnow()
+        content=gemini_response["response"]
     )
     
     session.add_message(assistant_message)
@@ -144,17 +137,17 @@ async def create_diagnosis_session(
     
     return ChatResponse(
         userMessage=MessageResponse(
-            id=str(user_message.id),
-            sessionId=str(session.id),
+            id=str(user_message.id.value),
+            sessionId=str(session.id.value),
             role="USER",
-            content=user_message.content,
+            content=user_message.content.value,
             timestamp=user_message.timestamp
         ),
         assistantMessage=MessageResponse(
-            id=str(assistant_message.id),
-            sessionId=str(session.id),
+            id=str(assistant_message.id.value),
+            sessionId=str(session.id.value),
             role="ASSISTANT",
-            content=assistant_message.content,
+            content=assistant_message.content.value,
             timestamp=assistant_message.timestamp
         ),
         suggestedQuestions=gemini_response.get("suggested_questions", [])
@@ -188,7 +181,7 @@ async def get_session_by_id(
         )
     
     return SessionDetailResponse(
-        id=str(session.id),
+        id=str(session.id.value),
         userId=str(session.user_id),
         vehicleId=str(session.vehicle_id),
         status=session.status.value,
@@ -231,10 +224,10 @@ async def get_session_messages(
     
     return [
         MessageResponse(
-            id=str(msg.id),
-            sessionId=str(session.id),
+            id=str(msg.id.value),
+            sessionId=str(session.id.value),
             role=msg.role.value,
-            content=msg.content,
+            content=msg.content.value,
             timestamp=msg.timestamp
         )
         for msg in session.messages
@@ -281,12 +274,10 @@ async def send_message(
             detail=f"La sesión está {session.status.value}, no se pueden enviar mensajes"
         )
     
-    user_message = DiagnosisMessage(
-        id=uuid4(),
-        session_id=session.id,
+    user_message = DiagnosisMessage.create(
+        session_id=session.id.value,
         role=MessageRole.USER,
-        content=data.content,
-        timestamp=datetime.utcnow()
+        content=data.content
     )
     
     session.add_message(user_message)
@@ -302,12 +293,10 @@ async def send_message(
             detail=f"AI service error: {str(e)}"
         )
     
-    assistant_message = DiagnosisMessage(
-        id=uuid4(),
-        session_id=session.id,
+    assistant_message = DiagnosisMessage.create(
+        session_id=session.id.value,
         role=MessageRole.ASSISTANT,
-        content=gemini_response["response"],
-        timestamp=datetime.utcnow()
+        content=gemini_response["response"]
     )
     
     session.add_message(assistant_message)
@@ -316,17 +305,17 @@ async def send_message(
     
     return ChatResponse(
         userMessage=MessageResponse(
-            id=str(user_message.id),
-            sessionId=str(session.id),
+            id=str(user_message.id.value),
+            sessionId=str(session.id.value),
             role="USER",
-            content=user_message.content,
+            content=user_message.content.value,
             timestamp=user_message.timestamp
         ),
         assistantMessage=MessageResponse(
-            id=str(assistant_message.id),
-            sessionId=str(session.id),
+            id=str(assistant_message.id.value),
+            sessionId=str(session.id.value),
             role="ASSISTANT",
-            content=assistant_message.content,
+            content=assistant_message.content.value,
             timestamp=assistant_message.timestamp
         ),
         suggestedQuestions=gemini_response.get("suggested_questions", [])

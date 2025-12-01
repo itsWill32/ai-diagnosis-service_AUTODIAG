@@ -10,6 +10,7 @@ from app.domain.entities.diagnosis_session import DiagnosisSession
 from app.domain.entities.diagnosis_message import DiagnosisMessage
 from app.domain.value_objects.session_status import SessionStatus
 from app.domain.value_objects.message_role import MessageRole
+from app.domain.value_objects import MessageId, MessageContent 
 from app.domain.repository.diagnosis_session_repository import DiagnosisSessionRepository
 
 
@@ -37,7 +38,7 @@ class PrismaDiagnosisSessionRepository(DiagnosisSessionRepository):
             
             await self.db.diagnosismessage.create(
                 data={
-                    "id": str(msg.id),
+                    "id": str(msg.id.value), 
                     "sessionId": str(session.id),
                     "role": msg.role.value,
                     "content": msg.content.value,
@@ -66,12 +67,12 @@ class PrismaDiagnosisSessionRepository(DiagnosisSessionRepository):
         existing_ids = {msg.id for msg in existing_messages}
         
         for msg in session.messages:
-            if str(msg.id) not in existing_ids:
+            if str(msg.id.value) not in existing_ids: 
                 attachments_data = [att.to_dict() for att in msg.attachments] if msg.attachments else []
 
                 await self.db.diagnosismessage.create(
                     data={
-                        "id": str(msg.id),
+                        "id": str(msg.id.value),
                         "sessionId": str(session.id),
                         "role": msg.role.value,
                         "content": msg.content.value,
@@ -121,17 +122,39 @@ class PrismaDiagnosisSessionRepository(DiagnosisSessionRepository):
     def _to_domain(self, prisma_session: PrismaSession) -> DiagnosisSession:
         messages = []
         for msg in (prisma_session.messages or []):
-            messages.append(
-                DiagnosisMessage(
-                    id=UUID(msg.id),
-                    session_id=UUID(msg.sessionId),
-                    role=MessageRole(msg.role),
-                    content=msg.content,
+            
+            try:
+                attachments_list = msg.attachments if msg.attachments else []
 
-                    attachments=msg.attachments if msg.attachments else [],
-                    timestamp=msg.timestamp
+                
+                messages.append(
+                    DiagnosisMessage.from_primitives(
+                        message_id=msg.id,
+                        session_id=msg.sessionId,
+                        role=msg.role,
+                        content=msg.content,
+                        attachments=attachments_list,
+                        timestamp=msg.timestamp
+                    )
                 )
-            )
+            except Exception as e:
+                from app.domain.entities.diagnosis_message import Attachment
+                
+                att_objs = []
+                if msg.attachments:
+                    for att in msg.attachments:
+                        att_objs.append(Attachment.from_dict(att))
+
+                messages.append(
+                    DiagnosisMessage(
+                        message_id=MessageId(UUID(msg.id)), 
+                        session_id=UUID(msg.sessionId),
+                        role=MessageRole(msg.role),
+                        content=MessageContent(msg.content),
+                        attachments=att_objs,
+                        timestamp=msg.timestamp
+                    )
+                )
         
         return DiagnosisSession(
             id=UUID(prisma_session.id),

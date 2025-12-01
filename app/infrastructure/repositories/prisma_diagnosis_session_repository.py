@@ -122,10 +122,8 @@ class PrismaDiagnosisSessionRepository(DiagnosisSessionRepository):
     def _to_domain(self, prisma_session: PrismaSession) -> DiagnosisSession:
         messages = []
         for msg in (prisma_session.messages or []):
-            
             try:
                 attachments_list = msg.attachments if msg.attachments else []
-
                 
                 messages.append(
                     DiagnosisMessage.from_primitives(
@@ -155,9 +153,12 @@ class PrismaDiagnosisSessionRepository(DiagnosisSessionRepository):
                         timestamp=msg.timestamp
                     )
                 )
+
+        
+        from app.domain.value_objects import SessionId 
         
         return DiagnosisSession(
-            id=UUID(prisma_session.id),
+            session_id=SessionId(UUID(prisma_session.id)),
             user_id=UUID(prisma_session.userId),
             vehicle_id=UUID(prisma_session.vehicleId),
             status=SessionStatus(prisma_session.status),

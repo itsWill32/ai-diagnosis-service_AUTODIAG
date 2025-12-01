@@ -7,10 +7,9 @@ from app.domain.entities import DiagnosisSession
 
 
 class GeminiService:
-
     
     def __init__(self):
- 
+        """Inicializa el cliente de Gemini"""
         genai.configure(api_key=settings.GOOGLE_GEMINI_API_KEY)
         
         self.model = genai.GenerativeModel('gemini-2.0-flash-exp')
@@ -18,7 +17,7 @@ class GeminiService:
         self.system_prompt = self._build_system_prompt()
     
     def _build_system_prompt(self) -> str:
-
+        """Construye el prompt del sistema para el mecánico virtual"""
         return 
     
     async def generate_response(
@@ -26,7 +25,7 @@ class GeminiService:
         session: DiagnosisSession,
         user_message: str
     ) -> Dict[str, any]:
-
+        """Genera respuesta del asistente usando Gemini"""
         conversation_history = self._build_conversation_history(session)
         
         conversation_history.append({
@@ -64,7 +63,7 @@ class GeminiService:
         last_user_message: str,
         last_assistant_response: str
     ) -> List[str]:
-
+        """Genera preguntas de seguimiento usando Gemini"""
         prompt = f"""
 Basado en esta conversación sobre un problema automotriz:
 
@@ -95,7 +94,7 @@ Responde ÚNICAMENTE con un JSON array de 3 strings. Ejemplo:
             return self._get_default_questions()
     
     def _extract_symptoms(self, conversation_text: str) -> List[str]:
-
+        """Extrae síntomas del texto de la conversación"""
         symptom_keywords = {
             "Ruido anormal": ["ruido", "chirrido", "golpeteo", "zumbido", "rechinido"],
             "Vibración": ["vibración", "vibra", "tiembla", "sacude"],
@@ -119,20 +118,20 @@ Responde ÚNICAMENTE con un JSON array de 3 strings. Ejemplo:
         return detected_symptoms
     
     def _build_conversation_history(self, session: DiagnosisSession) -> List[Dict]:
-
+        """Construye historial de conversación para Gemini"""
         history = []
         
         for message in session.messages:
             role = "user" if message.is_user_message() else "model"
             history.append({
                 "role": role,
-                "parts": [message.content.value]  
+                "parts": [message.content.value] 
             })
         
         return history
     
     def _get_default_questions(self) -> List[str]:
-
+        """Retorna preguntas por defecto si falla la generación"""
         return [
             "¿Cuándo notaste el problema por primera vez?",
             "¿El problema es constante o intermitente?",

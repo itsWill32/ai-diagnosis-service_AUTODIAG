@@ -38,10 +38,12 @@ class PrismaDiagnosisSessionRepository(DiagnosisSessionRepository):
             await self.db.diagnosismessage.create(
                 data={
                     "id": str(msg.id),
-                    "sessionId": str(session.id),
+                    "session": {
+                        "connect": {"id": str(session.id)}
+                    },
                     "role": msg.role.value,
                     "content": msg.content.value,
-                    "attachments": msg.attachments if msg.attachments else None,
+                    "attachments": msg.attachments if msg.attachments else [],
                     "timestamp": msg.timestamp,
                 }
             )
@@ -70,10 +72,12 @@ class PrismaDiagnosisSessionRepository(DiagnosisSessionRepository):
                 await self.db.diagnosismessage.create(
                     data={
                         "id": str(msg.id),
-                        "sessionId": str(session.id),
+                        "session": {
+                            "connect": {"id": str(session.id)}
+                        },
                         "role": msg.role.value,
                         "content": msg.content.value,
-                        "attachments": msg.attachments if msg.attachments else None,
+                        "attachments": msg.attachments if msg.attachments else [],
                         "timestamp": msg.timestamp,
                     }
                 )
@@ -124,7 +128,7 @@ class PrismaDiagnosisSessionRepository(DiagnosisSessionRepository):
                     id=UUID(msg.id),
                     session_id=UUID(msg.sessionId),
                     role=MessageRole(msg.role),
-                    content=msg.content.value,
+                    content=msg.content,
                     attachments=msg.attachments if msg.attachments else [],
                     timestamp=msg.timestamp
                 )

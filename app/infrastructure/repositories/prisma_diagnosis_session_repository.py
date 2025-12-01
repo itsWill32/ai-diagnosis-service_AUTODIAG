@@ -40,7 +40,7 @@ class PrismaDiagnosisSessionRepository(DiagnosisSessionRepository):
                     "id": str(msg.id),
                     "sessionId": str(session.id),
                     "role": msg.role.value,
-                    "content": msg.content,
+                    "content": msg.content.value,
                     "attachments": msg.attachments if msg.attachments else None,
                     "timestamp": msg.timestamp,
                 }
@@ -72,7 +72,7 @@ class PrismaDiagnosisSessionRepository(DiagnosisSessionRepository):
                         "id": str(msg.id),
                         "sessionId": str(session.id),
                         "role": msg.role.value,
-                        "content": msg.content,
+                        "content": msg.content.value,
                         "attachments": msg.attachments if msg.attachments else None,
                         "timestamp": msg.timestamp,
                     }
@@ -124,7 +124,7 @@ class PrismaDiagnosisSessionRepository(DiagnosisSessionRepository):
                     id=UUID(msg.id),
                     session_id=UUID(msg.sessionId),
                     role=MessageRole(msg.role),
-                    content=msg.content,
+                    content=msg.content.value,
                     attachments=msg.attachments if msg.attachments else [],
                     timestamp=msg.timestamp
                 )

@@ -169,7 +169,6 @@ async def get_session_by_id(
     user: Dict[str, Any] = Depends(get_current_user),
     repo: PrismaDiagnosisSessionRepository = Depends(get_diagnosis_session_repository)
 ):
-    """Get session by ID."""
     user_id = user["userId"]
     
     session = await repo.find_by_id(UUID(sessionId))
@@ -212,7 +211,6 @@ async def get_session_messages(
     user: Dict[str, Any] = Depends(get_current_user),
     repo: PrismaDiagnosisSessionRepository = Depends(get_diagnosis_session_repository)
 ):
-    """Get all messages from a session."""
     user_id = user["userId"]
     
     session = await repo.find_by_id(UUID(sessionId))

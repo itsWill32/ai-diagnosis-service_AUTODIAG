@@ -76,6 +76,9 @@ settings = get_settings()
 allowed_origins = settings.ALLOWED_ORIGINS.split(",") if settings.ALLOWED_ORIGINS else [
     "http://localhost:3000",  
     "http://localhost:8080",  
+    "https://warm-crisp-f80a0b.netlify.app",
+    "'http://localhost:5173" 
+
 ]
 
 app.add_middleware(

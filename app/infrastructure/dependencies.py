@@ -51,7 +51,7 @@ async def get_current_user(
             algorithms=[settings.JWT_ALGORITHM]
         )
         
-        user_id: str = payload.get("userId")
+        user_id: str = payload.get("sub")  
         email: str = payload.get("email")
         role: str = payload.get("role")
         
@@ -63,7 +63,7 @@ async def get_current_user(
             )
         
         return {
-            "userId": user_id,
+            "userId": user_id, 
             "email": email,
             "role": role
         }
@@ -74,7 +74,6 @@ async def get_current_user(
             detail=f"Could not validate credentials: {str(e)}",
             headers={"WWW-Authenticate": "Bearer"}
         )
-
 
 async def get_current_admin_user(
     current_user: Dict[str, Any] = Depends(get_current_user)

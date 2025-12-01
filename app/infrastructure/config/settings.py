@@ -18,8 +18,8 @@ class Settings(BaseSettings):
     JWT_SECRET: str
     JWT_ALGORITHM: str = "HS256"
     
-    VEHICLE_SERVICE_URL: Optional[str] = "http://localhost:3002"
-    WORKSHOP_SERVICE_URL: Optional[str] = "http://localhost:3003"
+    VEHICLE_SERVICE_URL: Optional[str] = "https://vehicle-service-autodiag.onrender.com"
+    WORKSHOP_SERVICE_URL: Optional[str] = "https://workshop-service-autodiag.onrender.com"
     
     ALLOWED_ORIGINS: str = "http://localhost:8080,http://localhost:3000"
     

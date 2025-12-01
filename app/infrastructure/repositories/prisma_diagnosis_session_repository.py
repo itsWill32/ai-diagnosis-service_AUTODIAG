@@ -1,10 +1,8 @@
-
-
 from typing import Optional, List
 from datetime import datetime
 from uuid import UUID
 
-from prisma import Prisma
+from prisma import Prisma, Json
 from prisma.models import DiagnosisSession as PrismaSession
 from prisma.models import DiagnosisMessage as PrismaMessage
 
@@ -35,15 +33,15 @@ class PrismaDiagnosisSessionRepository(DiagnosisSessionRepository):
         )
         
         for msg in session.messages:
+            attachments_data = [att.to_dict() for att in msg.attachments] if msg.attachments else []
+            
             await self.db.diagnosismessage.create(
                 data={
                     "id": str(msg.id),
-                    "session": {
-                        "connect": {"id": str(session.id)}
-                    },
+                    "sessionId": str(session.id),
                     "role": msg.role.value,
                     "content": msg.content.value,
-                    "attachments": [att.to_dict() for att in msg.attachments] if msg.attachments else [],
+                    "attachments": Json(attachments_data),
                     "timestamp": msg.timestamp,
                 }
             )
@@ -69,15 +67,15 @@ class PrismaDiagnosisSessionRepository(DiagnosisSessionRepository):
         
         for msg in session.messages:
             if str(msg.id) not in existing_ids:
+                attachments_data = [att.to_dict() for att in msg.attachments] if msg.attachments else []
+
                 await self.db.diagnosismessage.create(
                     data={
                         "id": str(msg.id),
-                        "session": {
-                            "connect": {"id": str(session.id)}
-                        },
+                        "sessionId": str(session.id),
                         "role": msg.role.value,
                         "content": msg.content.value,
-                        "attachments": [att.to_dict() for att in msg.attachments] if msg.attachments else [],
+                        "attachments": Json(attachments_data),
                         "timestamp": msg.timestamp,
                     }
                 )
@@ -129,6 +127,7 @@ class PrismaDiagnosisSessionRepository(DiagnosisSessionRepository):
                     session_id=UUID(msg.sessionId),
                     role=MessageRole(msg.role),
                     content=msg.content,
+
                     attachments=msg.attachments if msg.attachments else [],
                     timestamp=msg.timestamp
                 )

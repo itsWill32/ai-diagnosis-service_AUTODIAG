@@ -1,5 +1,6 @@
 from typing import List, Tuple
 from app.domain.entities import ProblemClassification
+from app.domain.value_objects.urgency_level import UrgencyLevelEnum
 from app.domain.value_objects import UrgencyLevel, ProblemCategory
 from app.domain.value_objects.problem_category import ProblemCategoryEnum
 
@@ -7,7 +8,6 @@ from app.domain.value_objects.problem_category import ProblemCategoryEnum
 class UrgencyCalculatorService:
     
     def __init__(self):
-
         self.critical_categories = [
             ProblemCategoryEnum.BRAKES,         
             ProblemCategoryEnum.SUSPENSION, 
@@ -50,7 +50,7 @@ class UrgencyCalculatorService:
     def calculate_urgency(
         self,
         classification: ProblemClassification
-    ) -> Tuple[UrgencyLevel, str, bool, int]:
+    ) -> Tuple[UrgencyLevelEnum, str, bool, int]: 
         
         category_vo = classification.category
         category_enum = category_vo.value
@@ -116,9 +116,10 @@ class UrgencyCalculatorService:
             for symptom in self.high_urgency_symptoms
         )
     
-    def _create_critical_urgency(self) -> Tuple[UrgencyLevel, str, bool, int]:
+
+    def _create_critical_urgency(self) -> Tuple[UrgencyLevelEnum, str, bool, int]:
         return (
-            UrgencyLevel.CRITICAL,
+            UrgencyLevelEnum.CRITICAL,
             "URGENTE: Problema crítico de seguridad. NO conduzca el vehículo. "
             "Contacte un servicio de grúa inmediatamente. Conducir puede poner "
             "en riesgo su vida y la de otros.",
@@ -126,9 +127,9 @@ class UrgencyCalculatorService:
             0       
         )
     
-    def _create_high_urgency(self) -> Tuple[UrgencyLevel, str, bool, int]:
+    def _create_high_urgency(self) -> Tuple[UrgencyLevelEnum, str, bool, int]:
         return (
-            UrgencyLevel.HIGH,
+            UrgencyLevelEnum.HIGH,
             "ATENCIÓN URGENTE: Problema que puede empeorar rápidamente o causar "
             "daños costosos. Evite conducir distancias largas. Lleve su vehículo "
             "al taller en las próximas 24-48 horas.",
@@ -136,9 +137,9 @@ class UrgencyCalculatorService:
             50      
         )
     
-    def _create_high_urgency_moderate(self) -> Tuple[UrgencyLevel, str, bool, int]:
+    def _create_high_urgency_moderate(self) -> Tuple[UrgencyLevelEnum, str, bool, int]:
         return (
-            UrgencyLevel.HIGH,
+            UrgencyLevelEnum.HIGH,
             "ALTA PRIORIDAD: Problema que requiere atención pronto. Puede seguir "
             "conduciendo con precaución, pero agende una cita en los próximos 1-3 días "
             "para evitar daños mayores.",
@@ -146,9 +147,9 @@ class UrgencyCalculatorService:
             200     
         )
     
-    def _create_medium_urgency(self) -> Tuple[UrgencyLevel, str, bool, int]:
+    def _create_medium_urgency(self) -> Tuple[UrgencyLevelEnum, str, bool, int]:
         return (
-            UrgencyLevel.MEDIUM,
+            UrgencyLevelEnum.MEDIUM,
             "PROGRAMAR SERVICIO: Problema que debe atenderse en las próximas "
             "1-2 semanas. Es seguro seguir conduciendo, pero no posponga "
             "indefinidamente para evitar que empeore.",
@@ -156,9 +157,9 @@ class UrgencyCalculatorService:
             1000    
         )
     
-    def _create_low_urgency(self) -> Tuple[UrgencyLevel, str, bool, int]:
+    def _create_low_urgency(self) -> Tuple[UrgencyLevelEnum, str, bool, int]:
         return (
-            UrgencyLevel.LOW,
+            UrgencyLevelEnum.LOW,
             "MANTENIMIENTO PREVENTIVO: Problema menor que puede atenderse cuando "
             "sea conveniente. Es completamente seguro seguir conduciendo. Agende "
             "servicio en su próximo mantenimiento programado.",

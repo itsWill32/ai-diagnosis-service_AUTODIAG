@@ -1,6 +1,6 @@
-
 from typing import Tuple, Dict
 from app.domain.entities import ProblemClassification
+from app.domain.value_objects.problem_category import ProblemCategoryEnum
 from app.domain.value_objects import ProblemCategory, UrgencyLevel, CostEstimate, Currency
 
 
@@ -16,69 +16,69 @@ class CostEstimatorService:
             UrgencyLevel.LOW: 0.95,       
         }
     
-    def _build_cost_ranges(self) -> Dict[ProblemCategory, Tuple[float, float, float, float]]:
+    def _build_cost_ranges(self) -> Dict[ProblemCategoryEnum, Tuple[float, float, float, float]]:
         return {
-            ProblemCategory.ENGINE: (
+            ProblemCategoryEnum.ENGINE: (
                 1500, 5000,   
                 2000, 15000   
             ),
             
-            ProblemCategory.TRANSMISSION: (
+            ProblemCategoryEnum.TRANSMISSION: (
                 1200, 4000,
                 3000, 20000
             ),
             
-            ProblemCategory.BRAKES: (
+            ProblemCategoryEnum.BRAKES: (
                 400, 800,
                 800, 1500
             ),
             
-            ProblemCategory.ELECTRICAL: (
+            ProblemCategoryEnum.ELECTRICAL: (
                 500, 1500,
                 300, 3000
             ),
             
-            ProblemCategory.AIR_CONDITIONING: (
+            ProblemCategoryEnum.AIR_CONDITIONING: (
                 600, 1200,
                 1000, 4000
             ),
             
-            ProblemCategory.SUSPENSION: (
+            ProblemCategoryEnum.SUSPENSION: (
                 500, 1000,
                 1200, 3500
             ),
             
-            ProblemCategory.EXHAUST: (
+            ProblemCategoryEnum.EXHAUST: (
                 300, 600,
                 800, 3000
             ),
             
-            ProblemCategory.FUEL_SYSTEM: (
+            ProblemCategoryEnum.FUEL_SYSTEM: (
                 700, 1500,
                 1000, 5000
             ),
             
-            ProblemCategory.COOLING_SYSTEM: (
+            ProblemCategoryEnum.COOLING_SYSTEM: (
                 500, 1000,
                 800, 2500
             ),
             
-            ProblemCategory.TIRES: (
+            ProblemCategoryEnum.TIRES: (
                 150, 300,     
                 1200, 3000    # Parts (4 tires)
             ),
             
-            ProblemCategory.BATTERY: (
+            ProblemCategoryEnum.BATTERY: (
                 100, 200,
                 1500, 3500
             ),
             
-            ProblemCategory.LIGHTS: (
+            ProblemCategoryEnum.LIGHTS: (
                 150, 300,
                 200, 1000
             ),
             
-            ProblemCategory.OTHER: (
+            ProblemCategoryEnum.OTHER: (
                 300, 1000,
                 500, 3000
             ),
@@ -90,12 +90,12 @@ class CostEstimatorService:
         urgency_level: UrgencyLevel
     ) -> CostEstimate:
 
-        category = classification.category
+        category_enum = classification.category.value
         
-        if category not in self.cost_ranges:
-            category = ProblemCategory.OTHER
+        if category_enum not in self.cost_ranges:
+            category_enum = ProblemCategoryEnum.OTHER
         
-        labor_min, labor_max, parts_min, parts_max = self.cost_ranges[category]
+        labor_min, labor_max, parts_min, parts_max = self.cost_ranges[category_enum]
         
         urgency_multiplier = self.urgency_multipliers.get(urgency_level, 1.0)
         
@@ -121,12 +121,12 @@ class CostEstimatorService:
         urgency_level: UrgencyLevel
     ) -> Dict[str, Dict[str, float]]:
 
-        category = classification.category
+        category_enum = classification.category.value
         
-        if category not in self.cost_ranges:
-            category = ProblemCategory.OTHER
+        if category_enum not in self.cost_ranges:
+            category_enum = ProblemCategoryEnum.OTHER
         
-        labor_min, labor_max, parts_min, parts_max = self.cost_ranges[category]
+        labor_min, labor_max, parts_min, parts_max = self.cost_ranges[category_enum]
         urgency_multiplier = self.urgency_multipliers.get(urgency_level, 1.0)
         
         return {
@@ -150,7 +150,9 @@ class CostEstimatorService:
             "El costo final puede variar según el taller y la inspección detallada."
         )
         
-        if category in [ProblemCategory.ENGINE, ProblemCategory.TRANSMISSION]:
+        category_enum = category.value
+
+        if category_enum in [ProblemCategoryEnum.ENGINE, ProblemCategoryEnum.TRANSMISSION]:
             base_disclaimer += (
                 "\n\nNOTA: Problemas de motor o transmisión pueden tener "
                 "costos muy variables. Una inspección presencial es fundamental "

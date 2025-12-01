@@ -12,7 +12,7 @@ class GeminiService:
         """Inicializa el cliente de Gemini"""
         genai.configure(api_key=settings.GOOGLE_GEMINI_API_KEY)
         
-        self.model = genai.GenerativeModel('gemini-2.0-flash-exp')
+        self.model = genai.GenerativeModel('gemini-1.5-flash')
         
         self.system_prompt = self._build_system_prompt()
     

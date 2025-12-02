@@ -1,5 +1,3 @@
-
-
 from typing import Dict, Any
 from fastapi import APIRouter, Depends, HTTPException
 from uuid import UUID
@@ -44,7 +42,7 @@ async def classify_problem(
     if str(session.user_id) != user["userId"]:
         raise HTTPException(status_code=403, detail="Access denied")
     
-    classification = classifier.classify_problem(session)
+    classification = await classifier.classify_problem(session)
     
     return ClassificationResponse(
         id=str(uuid4()),
@@ -79,7 +77,7 @@ async def get_urgency_level(
     if str(session.user_id) != user["userId"]:
         raise HTTPException(status_code=403, detail="Access denied")
     
-    classification = classifier.classify_problem(session)
+    classification = await classifier.classify_problem(session)
     
     urgency_level, description, safe_to_drive, max_km = urgency_calc.calculate_urgency(classification)
     
@@ -115,7 +113,8 @@ async def get_cost_estimate(
     if str(session.user_id) != user["userId"]:
         raise HTTPException(status_code=403, detail="Access denied")
     
-    classification = classifier.classify_problem(session)
+    classification = await classifier.classify_problem(session)
+    
     urgency_level, _, _, _ = urgency_calc.calculate_urgency(classification)
     
     min_cost, max_cost, breakdown, disclaimer = cost_estimator.estimate_cost(
@@ -127,10 +126,10 @@ async def get_cost_estimate(
         maxCost=max_cost,
         currency="MXN",
         breakdown=CostBreakdown(
-            partsMin=breakdown["parts_min"],
-            partsMax=breakdown["parts_max"],
-            laborMin=breakdown["labor_min"],
-            laborMax=breakdown["labor_max"]
+            partsMin=breakdown["parts"]["min"],  
+            partsMax=breakdown["parts"]["max"],
+            laborMin=breakdown["labor"]["min"],
+            laborMax=breakdown["labor"]["max"]
         ),
         disclaimer=disclaimer
     )

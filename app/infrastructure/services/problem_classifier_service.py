@@ -215,9 +215,9 @@ class ProblemClassifierService:
         
         classification = ProblemClassification.create(
             session_id=session.id,  
-            category=ProblemCategory(best_category),
+            category=best_category,
             subcategory=subcategory,
-            confidence_score=ConfidenceScore(confidence),
+            confidence_score=confidence,
             symptoms=symptoms
         )
         

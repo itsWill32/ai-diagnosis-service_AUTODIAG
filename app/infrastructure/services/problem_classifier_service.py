@@ -198,7 +198,7 @@ class ProblemClassifierService:
         self,
         session: DiagnosisSession
     ) -> ProblemClassification:
-
+        
         session.validate_can_classify()
         
         conversation_text = session.get_conversation_text().lower()
@@ -214,7 +214,7 @@ class ProblemClassifierService:
         symptoms = self._extract_symptoms_for_category(conversation_text, best_category)
         
         classification = ProblemClassification.create(
-            session_id=session.session_id,
+            session_id=session.id,  
             category=ProblemCategory(best_category),
             subcategory=subcategory,
             confidence_score=ConfidenceScore(confidence),
@@ -224,13 +224,11 @@ class ProblemClassifierService:
         return classification
     
     def _calculate_category_scores(self, text: str) -> Dict[str, float]:
-
         scores = {category: 0.0 for category in self.category_keywords.keys()}
         
         for category, keywords in self.category_keywords.items():
             for keyword, weight in keywords.items():
                 occurrences = text.count(keyword)
-                
                 scores[category] += weight * occurrences
         
         return scores
@@ -239,7 +237,6 @@ class ProblemClassifierService:
         self,
         category_scores: Dict[str, float]
     ) -> Tuple[str, float]:
-
         best_category = max(category_scores, key=category_scores.get)
         best_score = category_scores[best_category]
         
@@ -253,17 +250,13 @@ class ProblemClassifierService:
         best_score: float,
         all_scores: Dict[str, float]
     ) -> float:
-
         if best_score == 0.0:
             return 0.0
         
         total_score = sum(all_scores.values())
-        
         confidence = best_score / total_score
         
-  
         confidence = max(0.5, min(1.0, confidence))
-        
         return round(confidence, 2)
     
     def _extract_subcategory(
@@ -271,7 +264,6 @@ class ProblemClassifierService:
         text: str,
         category: str
     ) -> Optional[str]:
-
         return None
     
     def _extract_symptoms_for_category(
@@ -279,12 +271,9 @@ class ProblemClassifierService:
         text: str,
         category: str
     ) -> List[str]:
-
         symptoms = []
-        
         if category in self.category_keywords:
             for keyword, weight in self.category_keywords[category].items():
                 if keyword in text:
                     symptoms.append(keyword)
-        
-        return symptoms[:5]  
+        return symptoms[:5]

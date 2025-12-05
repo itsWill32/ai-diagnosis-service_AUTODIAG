@@ -1,5 +1,3 @@
-
-
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -7,10 +5,9 @@ from contextlib import asynccontextmanager
 import logging
 
 from app.infrastructure.config.settings import get_settings
-from app.infrastructure.config.database import initialize_database, close_database
+from app.infrastructure.config.database import get_db
 from app.infrastructure.middleware import (
     setup_error_handlers,
-    request_logging_middleware
 )
 
 from app.infrastructure.api.routers import (
@@ -33,52 +30,58 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("STARTING  SERVICE")
+
     
     settings = get_settings()
     
+
     try:
-        await initialize_database()
-        logger.info(" DB Connected")
+        db = await get_db()
+        await db.connect()
+        logger.info("Db connected ")
+        
+        result = await db.query_raw("SELECT COUNT(*) FROM diagnosis_sessions")
+        logger.info(f"📊 Found {result[0]['count']} sessions in database")
+        
     except Exception as e:
-        logger.error(f" DB failed: {str(e)}")
+        logger.error(f" Database connection failed: {str(e)}")
         raise
     
-    logger.info(f" Redis: Connected to {settings.REDIS_URL.split('@')[1] if '@' in settings.REDIS_URL else 'Redis'}")
-    logger.info(" SERVICE READY")
+    logger.info(" DIAGNOSIS SERVICE READY")
     
     yield
     
-    logger.info("SHUTTING DOWN SERVICE")
+
+    logger.info("SHUTTING DOWN DIAGNOSIS SERVICE...")
     
     try:
-        await close_database()
-        logger.info("DB Disconnected")
+        db = await get_db()
+        await db.disconnect()
+        logger.info(" Database disconnected successfully")
     except Exception as e:
-        logger.error(f"Error during shutdown: {str(e)}")
+        logger.error(f" Error during shutdown: {str(e)}")
     
-    logger.info("SHUTDOWN COMPLETE")
+    logger.info(" SHUTDOWN COMPLETE")
 
 
 
 app = FastAPI(
     title="AutoDiag - Diagnosis Service API",
+    description="  AutoDiag Diagnosis Service",
     version="1.0.0",
-    lifespan=lifespan,  
-
+    lifespan=lifespan,
+    docs_url="/docs",
+    redoc_url="/redoc",
 )
-
-
 
 
 settings = get_settings()
 
 allowed_origins = settings.ALLOWED_ORIGINS.split(",") if settings.ALLOWED_ORIGINS else [
-    "http://localhost:3000",  
-    "http://localhost:8080",  
+    "http://localhost:3000",
+    "http://localhost:8080",
+    "http://localhost:5173",
     "https://warm-crisp-f80a0b.netlify.app",
-    "'http://localhost:5173" 
-
 ]
 
 app.add_middleware(
@@ -92,10 +95,7 @@ app.add_middleware(
 )
 
 
-
-
 setup_error_handlers(app)
-
 
 
 @app.get(
@@ -106,17 +106,31 @@ setup_error_handlers(app)
     response_description="Estado del servicio"
 )
 async def health_check():
-    from app.infrastructure.config.database import check_database_health
-    
-    db_health = await check_database_health()
+    """
+    Endpoint de health check que verifica:
+    - Estado del servicio
+    - Conexión a base de datos
+    - Versión del servicio
+    """
+    try:
+        db = await get_db()
+        
+        await db.query_raw("SELECT 1")
+        db_status = "healthy"
+        
+    except Exception as e:
+        logger.error(f"Health check failed: {str(e)}")
+        db_status = "unhealthy"
     
     return {
-        "status": "healthy" if db_health["status"] == "healthy" else "degraded",
+        "status": "healthy" if db_status == "healthy" else "degraded",
         "service": "diagnosis-service",
         "version": "1.0.0",
-        "database": db_health
+        "database": {
+            "status": db_status,
+            "provider": "postgresql"
+        }
     }
-
 
 @app.get(
     "/",
@@ -125,30 +139,34 @@ async def health_check():
     description="Información básica del servicio"
 )
 async def root():
+    """
+    Endpoint raíz con información del servicio.
+    """
     return {
         "service": "AutoDiag - Diagnosis Service",
         "version": "1.0.0",
+        "description": "Servicio de diagnóstico automotriz con IA",
         "docs": "/docs",
+        "redoc": "/redoc",
         "health": "/health"
     }
 
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
+    """
+    Manejador global de excepciones no capturadas.
+    """
     logger.error(f"Unhandled exception: {str(exc)}", exc_info=True)
-    
-    error_message = "Internal server error"
     
     return JSONResponse(
         status_code=500,
         content={
             "error": "INTERNAL_SERVER_ERROR",
-            "message": error_message,
+            "message": "An unexpected error occurred. Please try again later.",
             "statusCode": 500
         }
     )
-
-
 
 app.include_router(
     diagnosis_router,
@@ -181,15 +199,13 @@ app.include_router(
 )
 
 
-
-
 if __name__ == "__main__":
     import uvicorn
     
     uvicorn.run(
-        "app.main:app", 
+        "app.main:app",
         host="0.0.0.0",
         port=settings.PORT,
-        reload=False, 
+        reload=True,
         log_level="info"
     )

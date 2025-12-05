@@ -15,6 +15,12 @@ from app.domain.repository.diagnosis_session_repository import DiagnosisSessionR
 
 
 class PrismaDiagnosisSessionRepository(DiagnosisSessionRepository):
+    """
+    ✅ CORREGIDO: Usa .create() y .update() en lugar de .save()
+    
+    Implementación de repositorio usando Prisma ORM.
+    Maneja conversiones entre entidades de dominio y modelos Prisma.
+    """
     
     def __init__(self, db: Prisma):
         self.db = db
@@ -84,6 +90,7 @@ class PrismaDiagnosisSessionRepository(DiagnosisSessionRepository):
         return session
     
     async def find_by_id(self, session_id: UUID) -> Optional[DiagnosisSession]:
+
         prisma_session = await self.db.diagnosissession.find_unique(
             where={"id": str(session_id)},
             include={"messages": True}
@@ -100,6 +107,7 @@ class PrismaDiagnosisSessionRepository(DiagnosisSessionRepository):
         vehicle_id: Optional[str] = None,
         limit: int = 10
     ) -> List[DiagnosisSession]:
+
         where_clause = {"userId": user_id}
         
         if vehicle_id:
@@ -115,11 +123,13 @@ class PrismaDiagnosisSessionRepository(DiagnosisSessionRepository):
         return [self._to_domain(s) for s in prisma_sessions]
     
     async def delete(self, session_id: UUID) -> None:
+
         await self.db.diagnosissession.delete(
             where={"id": str(session_id)}
         )
     
     def _to_domain(self, prisma_session: PrismaSession) -> DiagnosisSession:
+
         messages = []
         for msg in (prisma_session.messages or []):
             try:
@@ -135,7 +145,7 @@ class PrismaDiagnosisSessionRepository(DiagnosisSessionRepository):
                         timestamp=msg.timestamp
                     )
                 )
-            except Exception as e:
+            except Exception:
                 from app.domain.entities.diagnosis_message import Attachment
                 
                 att_objs = []
@@ -153,7 +163,6 @@ class PrismaDiagnosisSessionRepository(DiagnosisSessionRepository):
                         timestamp=msg.timestamp
                     )
                 )
-
         
         from app.domain.value_objects import SessionId 
         

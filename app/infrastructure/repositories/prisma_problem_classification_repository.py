@@ -1,5 +1,3 @@
-
-
 from typing import Optional, List, Dict
 from datetime import datetime
 from uuid import UUID
@@ -12,42 +10,62 @@ from app.domain.value_objects.problem_category import ProblemCategory
 
 
 class PrismaProblemClassificationRepository:
-    
+
     def __init__(self, db: Prisma):
         self.db = db
     
-    async def save(self, classification: ProblemClassification) -> ProblemClassification:
+    async def create(self, classification: ProblemClassification) -> ProblemClassification:
+        """
+        Crea una nueva clasificación de problema.
+        """
         class_dict = classification.to_dict()
         
+        await self.db.problemclassification.create(
+            data={
+                "id": str(classification.id),
+                "sessionId": str(classification.session_id),
+                "category": class_dict["category"],
+                "subcategory": class_dict.get("subcategory"),
+                "confidenceScore": class_dict["confidence_score"],
+                "symptoms": class_dict.get("symptoms", []),
+            }
+        )
+        
+        return classification
+    
+    async def update(self, classification: ProblemClassification) -> ProblemClassification:
+        """
+        Actualiza una clasificación existente.
+        """
+        class_dict = classification.to_dict()
+        
+        await self.db.problemclassification.update(
+            where={"id": str(classification.id)},
+            data={
+                "category": class_dict["category"],
+                "subcategory": class_dict.get("subcategory"),
+                "confidenceScore": class_dict["confidence_score"],
+                "symptoms": class_dict.get("symptoms", []),
+            }
+        )
+        
+        return classification
+    
+    async def save(self, classification: ProblemClassification) -> ProblemClassification:
+
         existing = await self.db.problemclassification.find_unique(
             where={"id": str(classification.id)}
         )
         
         if existing:
-            await self.db.problemclassification.update(
-                where={"id": str(classification.id)},
-                data={
-                    "category": class_dict["category"],
-                    "subcategory": class_dict.get("subcategory"),
-                    "confidenceScore": class_dict["confidence_score"],
-                    "symptoms": class_dict.get("symptoms", []),
-                }
-            )
+            return await self.update(classification)
         else:
-            await self.db.problemclassification.create(
-                data={
-                    "id": str(classification.id),
-                    "sessionId": str(classification.session_id),
-                    "category": class_dict["category"],
-                    "subcategory": class_dict.get("subcategory"),
-                    "confidenceScore": class_dict["confidence_score"],
-                    "symptoms": class_dict.get("symptoms", []),
-                }
-            )
-        
-        return classification
+            return await self.create(classification)
     
     async def find_by_id(self, classification_id: UUID) -> Optional[ProblemClassification]:
+        """
+        Busca una clasificación por su ID.
+        """
         prisma_class = await self.db.problemclassification.find_unique(
             where={"id": str(classification_id)}
         )
@@ -58,6 +76,9 @@ class PrismaProblemClassificationRepository:
         return self._to_domain(prisma_class)
     
     async def find_by_session_id(self, session_id: UUID) -> Optional[ProblemClassification]:
+        """
+        Busca la clasificación de una sesión específica.
+        """
         prisma_class = await self.db.problemclassification.find_unique(
             where={"sessionId": str(session_id)}
         )
@@ -68,10 +89,14 @@ class PrismaProblemClassificationRepository:
         return self._to_domain(prisma_class)
     
     async def delete(self, classification_id: UUID) -> None:
+        """
+        Elimina una clasificación.
+        """
         await self.db.problemclassification.delete(
             where={"id": str(classification_id)}
         )
     
+
     
     async def count_by_category(
         self,
@@ -79,6 +104,9 @@ class PrismaProblemClassificationRepository:
         from_date: Optional[datetime] = None,
         to_date: Optional[datetime] = None
     ) -> int:
+        """
+        Cuenta clasificaciones de una categoría específica.
+        """
         where_clause = {"category": category.value}
         
         if from_date:
@@ -93,6 +121,9 @@ class PrismaProblemClassificationRepository:
         from_date: Optional[datetime] = None,
         to_date: Optional[datetime] = None
     ) -> Dict[str, int]:
+        """
+        Obtiene la distribución de todas las categorías.
+        """
         where_clause = {}
         
         if from_date:
@@ -118,6 +149,9 @@ class PrismaProblemClassificationRepository:
         from_date: Optional[datetime] = None,
         to_date: Optional[datetime] = None
     ) -> List[tuple[str, int]]:
+        """
+        Obtiene las categorías más comunes ordenadas por frecuencia.
+        """
         distribution = await self.get_category_distribution(from_date, to_date)
         
         sorted_categories = sorted(
@@ -132,6 +166,9 @@ class PrismaProblemClassificationRepository:
         self,
         category: ProblemCategory
     ) -> float:
+        """
+        Calcula el confidence score promedio de una categoría.
+        """
         classifications = await self.db.problemclassification.find_many(
             where={"category": category.value},
             select={"confidenceScore": True}
@@ -147,6 +184,9 @@ class PrismaProblemClassificationRepository:
         self,
         prisma_class: PrismaProblemClassification
     ) -> ProblemClassification:
+        """
+        Convierte un modelo Prisma a entidad de dominio.
+        """
         return ProblemClassification.from_primitives(
             classification_id=prisma_class.id,
             session_id=prisma_class.sessionId,

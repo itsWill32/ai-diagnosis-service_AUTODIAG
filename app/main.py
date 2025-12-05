@@ -5,10 +5,12 @@ from contextlib import asynccontextmanager
 import logging
 
 from app.infrastructure.config.settings import get_settings
-from app.infrastructure.config.database import get_db
-from app.infrastructure.middleware import (
-    setup_error_handlers,
+from app.infrastructure.config.database import (
+    initialize_database,
+    close_database,
+    check_database_health
 )
+from app.infrastructure.middleware import setup_error_handlers
 
 from app.infrastructure.api.routers import (
     diagnosis_router,
@@ -19,13 +21,11 @@ from app.infrastructure.api.routers import (
 )
 
 
-
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
-
 
 
 @asynccontextmanager
@@ -36,30 +36,25 @@ async def lifespan(app: FastAPI):
     
 
     try:
-        db = await get_db()
-        await db.connect()
-        logger.info("Db connected ")
-        
-        result = await db.query_raw("SELECT COUNT(*) FROM diagnosis_sessions")
-        logger.info(f"📊 Found {result[0]['count']} sessions in database")
+        await initialize_database()
+        logger.info("DB connected successfully")
         
     except Exception as e:
-        logger.error(f" Database connection failed: {str(e)}")
+        logger.error(f" DB connection failed: {str(e)}")
         raise
     
-    logger.info(" DIAGNOSIS SERVICE READY")
+    logger.info("  SERVICE READY")
     
     yield
     
-
+   
     logger.info("SHUTTING DOWN DIAGNOSIS SERVICE...")
     
     try:
-        db = await get_db()
-        await db.disconnect()
-        logger.info(" Database disconnected successfully")
+        await close_database()
+        logger.info("Database disconnected successfully")
     except Exception as e:
-        logger.error(f" Error during shutdown: {str(e)}")
+        logger.error(f"Error during shutdown: {str(e)}")
     
     logger.info(" SHUTDOWN COMPLETE")
 
@@ -67,7 +62,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="AutoDiag - Diagnosis Service API",
-    description="  AutoDiag Diagnosis Service",
+    description="AutoDiag Diagnosis Service",
     version="1.0.0",
     lifespan=lifespan,
     docs_url="/docs",
@@ -95,6 +90,7 @@ app.add_middleware(
 )
 
 
+
 setup_error_handlers(app)
 
 
@@ -102,46 +98,30 @@ setup_error_handlers(app)
     "/health",
     tags=["Health"],
     summary="Health Check",
-    description="Verifica que el servicio está funcionando correctamente",
-    response_description="Estado del servicio"
+    description="Verifica que el servicio está funcionando correctamente"
 )
 async def health_check():
     """
     Endpoint de health check que verifica:
     - Estado del servicio
     - Conexión a base de datos
-    - Versión del servicio
     """
-    try:
-        db = await get_db()
-        
-        await db.query_raw("SELECT 1")
-        db_status = "healthy"
-        
-    except Exception as e:
-        logger.error(f"Health check failed: {str(e)}")
-        db_status = "unhealthy"
+    db_health = await check_database_health()
     
     return {
-        "status": "healthy" if db_status == "healthy" else "degraded",
+        "status": "healthy" if db_health["status"] == "healthy" else "degraded",
         "service": "diagnosis-service",
         "version": "1.0.0",
-        "database": {
-            "status": db_status,
-            "provider": "postgresql"
-        }
+        "database": db_health
     }
 
 @app.get(
     "/",
     tags=["Root"],
-    summary="Service Info",
-    description="Información básica del servicio"
+    summary="Service Info"
 )
 async def root():
-    """
-    Endpoint raíz con información del servicio.
-    """
+    """Información básica del servicio."""
     return {
         "service": "AutoDiag - Diagnosis Service",
         "version": "1.0.0",
@@ -154,19 +134,19 @@ async def root():
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    """
-    Manejador global de excepciones no capturadas.
-    """
+    """Manejador global de excepciones."""
     logger.error(f"Unhandled exception: {str(exc)}", exc_info=True)
     
     return JSONResponse(
         status_code=500,
         content={
             "error": "INTERNAL_SERVER_ERROR",
-            "message": "An unexpected error occurred. Please try again later.",
+            "message": "An unexpected error occurred",
             "statusCode": 500
         }
     )
+
+
 
 app.include_router(
     diagnosis_router,
@@ -201,6 +181,8 @@ app.include_router(
 
 if __name__ == "__main__":
     import uvicorn
+    
+    settings = get_settings()
     
     uvicorn.run(
         "app.main:app",

@@ -85,3 +85,7 @@ async def execute_in_transaction(callback):
     
     async with prisma.tx() as transaction:
         return await callback(transaction)
+
+async def get_db() -> Prisma:
+
+    return get_prisma_client()

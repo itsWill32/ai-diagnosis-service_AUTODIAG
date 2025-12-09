@@ -38,15 +38,15 @@ class CostEstimatorService:
         self,
         classification: ProblemClassification,
         urgency_level: UrgencyLevel 
-    ) -> CostEstimate:
+    ) -> Tuple[float, float, Dict[str, Dict[str, float]], str]: 
 
         category_enum = classification.category.value
+        
         if category_enum not in self.cost_ranges:
             category_enum = ProblemCategoryEnum.OTHER
         
         labor_min, labor_max, parts_min, parts_max = self.cost_ranges[category_enum]
         
-     
         if hasattr(urgency_level, 'level'):
             u_enum = urgency_level.level
         else:
@@ -61,21 +61,22 @@ class CostEstimatorService:
         
         total_min = labor_min_adj + parts_min_adj
         total_max = labor_max_adj + parts_max_adj
-        total_avg = (total_min + total_max) / 2
         
-        return CostEstimate(
-            min_cost=total_min,
-            max_cost=total_max,
-            average_cost=total_avg,
-            currency=Currency.MXN
-        )
+        breakdown = {
+            "labor": {"min": labor_min_adj, "max": labor_max_adj},
+            "parts": {"min": parts_min_adj, "max": parts_max_adj}
+        }
+        
+        disclaimer = self.generate_disclaimer(classification.category, urgency_level)
+
+        
+        return total_min, total_max, breakdown, disclaimer
     
     def get_cost_breakdown(
         self,
         classification: ProblemClassification,
         urgency_level: UrgencyLevel
     ) -> Dict[str, Dict[str, float]]:
-
         category_enum = classification.category.value
         if category_enum not in self.cost_ranges:
             category_enum = ProblemCategoryEnum.OTHER

@@ -1,4 +1,3 @@
-
 from uuid import UUID
 from datetime import datetime
 from typing import Protocol
@@ -16,37 +15,19 @@ from app.application.dtos.response import DiagnosisSessionDto
 
 
 class DiagnosisSessionRepository(Protocol):
-    """Interfaz del repositorio de sesiones."""
-    
-    async def save(self, session: DiagnosisSession) -> DiagnosisSession:
-        """Guarda una sesión de diagnóstico."""
-        ...
-    
-    async def find_by_id(self, session_id: SessionId) -> DiagnosisSession | None:
-        """Busca una sesión por ID."""
-        ...
+    async def save(self, session: DiagnosisSession) -> DiagnosisSession: ...
+    async def find_by_id(self, session_id: SessionId) -> DiagnosisSession | None: ...
 
 
 class VehicleServiceClient(Protocol):
-    """Cliente para comunicarse con Vehicle Service."""
-    
-    async def vehicle_exists(self, vehicle_id: UUID, user_id: UUID) -> bool:
-        """Verifica que el vehículo existe y pertenece al usuario."""
-        ...
+    async def vehicle_exists(self, vehicle_id: UUID, user_id: UUID, token: str) -> bool: ...
 
 
 class GeminiChatService(Protocol):
-    
-    async def send_initial_message(
-        self, 
-        message: str,
-        context: dict
-    ) -> str:
-        ...
+    async def send_initial_message(self, message: str, context: dict) -> str: ...
 
 
 class StartDiagnosisSessionUseCase:
-
     
     def __init__(
         self,
@@ -61,12 +42,14 @@ class StartDiagnosisSessionUseCase:
     async def execute(
         self,
         dto: StartSessionDto,
-        user_id: UUID
+        user_id: UUID,
+        token: str 
     ) -> DiagnosisSessionDto:
 
         vehicle_exists = await self.vehicle_service_client.vehicle_exists(
             vehicle_id=dto.vehicle_id,
-            user_id=user_id
+            user_id=user_id,
+            token=token
         )
         
         if not vehicle_exists:
@@ -120,10 +103,8 @@ class StartDiagnosisSessionUseCase:
 
 
 class VehicleNotFoundException(Exception):
-    """El vehículo no existe."""
     pass
 
 
 class VehicleNotOwnedByUserException(Exception):
-    """El vehículo no pertenece al usuario."""
     pass

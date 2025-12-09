@@ -1,5 +1,5 @@
 from typing import Dict, Any
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from uuid import UUID
 
 from app.infrastructure.dependencies import (
@@ -13,7 +13,8 @@ from app.infrastructure.api.routers.schemas import (
     ClassificationResponse,
     UrgencyResponse,
     CostEstimateResponse,
-    ErrorResponse
+    ErrorResponse,
+    CostBreakdown
 )
 
 router = APIRouter()
@@ -49,7 +50,7 @@ async def classify_problem(
         sessionId=sessionId,
         category=classification.category.value,
         subcategory=classification.subcategory,
-        confidenceScore=classification.confidence_score,
+        confidenceScore=classification.confidence_score.value, 
         symptoms=classification.symptoms,
         createdAt=datetime.utcnow()
     )
@@ -103,7 +104,6 @@ async def get_cost_estimate(
     urgency_calc = Depends(get_urgency_calculator_service),
     cost_estimator = Depends(get_cost_estimator_service)
 ):
-    from app.infrastructure.api.routers.schemas import CostBreakdown
     
     session = await repo.find_by_id(UUID(sessionId))
     
@@ -126,7 +126,7 @@ async def get_cost_estimate(
         maxCost=max_cost,
         currency="MXN",
         breakdown=CostBreakdown(
-            partsMin=breakdown["parts"]["min"],  
+            partsMin=breakdown["parts"]["min"],
             partsMax=breakdown["parts"]["max"],
             laborMin=breakdown["labor"]["min"],
             laborMax=breakdown["labor"]["max"]

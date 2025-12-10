@@ -73,7 +73,7 @@ async def create_diagnosis_session(
     authorization: str = Header(...),
     user: Dict[str, Any] = Depends(get_current_vehicle_owner),
     repo: PrismaDiagnosisSessionRepository = Depends(get_diagnosis_session_repository),
-    gemini: GeminiService = Depends(get_gemini_service),
+    claude: ClaudeService = Depends(get_claude_service),
     vehicle_client: VehicleServiceClient = Depends(get_vehicle_client)
 ):
     from app.domain.entities.diagnosis_session import DiagnosisSession
@@ -387,7 +387,7 @@ async def send_message(
     data: SendMessageRequest,
     user: Dict[str, Any] = Depends(get_current_vehicle_owner),
     repo: PrismaDiagnosisSessionRepository = Depends(get_diagnosis_session_repository),
-    gemini: GeminiService = Depends(get_gemini_service)
+    claude: ClaudeService = Depends(get_claude_service)
 ):
     from app.domain.entities.diagnosis_message import DiagnosisMessage
     from app.domain.value_objects.message_role import MessageRole

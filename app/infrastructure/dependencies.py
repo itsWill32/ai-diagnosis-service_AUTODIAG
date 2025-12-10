@@ -14,7 +14,7 @@ from app.infrastructure.repositories import (
 )
 
 from app.infrastructure.services import (
-    GeminiService,
+    ClaudeService,
     ProblemClassifierService,
     UrgencyCalculatorService,
     CostEstimatorService,
@@ -139,9 +139,9 @@ def get_sentiment_analysis_repository() -> PrismaSentimentAnalysisRepository:
 
 
 
-def get_gemini_service() -> GeminiService:
+def get_claude_service() -> ClaudeService:
 
-    return GeminiService()
+    return ClaudeService()
 
 
 def get_problem_classifier_service() -> ProblemClassifierService:
@@ -208,7 +208,7 @@ __all__ = [
     "get_sentiment_analysis_repository",
 
 
-    "get_gemini_service",
+    "get_claude_service",
     "get_problem_classifier_service",
     "get_urgency_calculator_service",
     "get_cost_estimator_service",

@@ -13,7 +13,8 @@ class Settings(BaseSettings):
     
     REDIS_URL: str
     
-    GOOGLE_GEMINI_API_KEY: str
+    # AI Service - Claude (Anthropic)
+    ANTHROPIC_API_KEY: str
     
     JWT_SECRET: str
     JWT_ALGORITHM: str = "HS256"

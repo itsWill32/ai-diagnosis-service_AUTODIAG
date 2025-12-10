@@ -99,13 +99,13 @@ class PrismaSentimentAnalysisRepository(SentimentAnalysisRepository):
         to_date: Optional[datetime] = None
     ) -> int:
 
-        where_clause = {"sentimentLabel": sentiment_label.value}
-        
+        where_clause = {"label": sentiment_label.value}
+
         if from_date:
             where_clause["analyzedAt"] = {"gte": from_date}
         if to_date:
             where_clause["analyzedAt"] = {**where_clause.get("analyzedAt", {}), "lte": to_date}
-        
+
         return await self.db.sentimentanalysis.count(where=where_clause)
     
     async def get_sentiment_distribution(
@@ -115,22 +115,22 @@ class PrismaSentimentAnalysisRepository(SentimentAnalysisRepository):
     ) -> Dict[str, int]:
 
         where_clause = {}
-        
+
         if from_date:
             where_clause["analyzedAt"] = {"gte": from_date}
         if to_date:
             where_clause["analyzedAt"] = {**where_clause.get("analyzedAt", {}), "lte": to_date}
-        
+
         sentiments = await self.db.sentimentanalysis.find_many(
             where=where_clause,
-            select={"sentimentLabel": True}
+            select={"label": True}
         )
-        
+
         distribution = {}
         for s in sentiments:
-            label = s.sentimentLabel
+            label = s.label
             distribution[label] = distribution.get(label, 0) + 1
-        
+
         return distribution
     
     async def get_average_sentiment_score(
@@ -140,24 +140,24 @@ class PrismaSentimentAnalysisRepository(SentimentAnalysisRepository):
     ) -> float:
 
         where_clause = {}
-        
+
         if context_key and context_value:
             where_clause["context"] = {
                 "path": [context_key],
                 "equals": context_value
             }
-        
+
         sentiments = await self.db.sentimentanalysis.find_many(
             where=where_clause,
-            select={"sentimentLabel": True}
+            select={"label": True}
         )
-        
+
         if not sentiments:
             return 0.0
-        
+
         score_map = {"POSITIVE": 1.0, "NEUTRAL": 0.0, "NEGATIVE": -1.0}
-        scores = [score_map.get(s.sentimentLabel, 0.0) for s in sentiments]
-        
+        scores = [score_map.get(s.label, 0.0) for s in sentiments]
+
         return sum(scores) / len(scores)
     
     async def count_total(self) -> int:

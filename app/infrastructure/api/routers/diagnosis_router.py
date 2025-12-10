@@ -1,5 +1,5 @@
 from typing import List, Dict, Any, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Header
 from uuid import UUID
 
 from app.infrastructure.dependencies import (
@@ -70,6 +70,7 @@ async def get_user_sessions(
 )
 async def create_diagnosis_session(
     data: StartSessionRequest,
+    authorization: str = Header(...),
     user: Dict[str, Any] = Depends(get_current_vehicle_owner),
     repo: PrismaDiagnosisSessionRepository = Depends(get_diagnosis_session_repository),
     gemini: GeminiService = Depends(get_gemini_service),
@@ -82,19 +83,20 @@ async def create_diagnosis_session(
     from app.domain.value_objects import SessionId
     from uuid import uuid4
     from datetime import datetime
-    
+
     user_id = user["userId"]
     vehicle_id = data.vehicleId
-    
-    auth_token = f"Bearer {user.get('token', '')}"
-    
+
+    # Validación de vehículo (opcional, no bloqueante)
     try:
         vehicle = await vehicle_client.get_vehicle(
             vehicle_id=vehicle_id,
             user_id=user_id,
-            auth_token=auth_token
+            auth_token=authorization
         )
     except Exception as e:
+        # Log del error pero no bloquear la creación de sesión
+        print(f"DEBUG: Vehicle Service Error: {str(e)}")
         pass
     
     session = DiagnosisSession(
@@ -161,6 +163,7 @@ async def create_diagnosis_session(
 )
 async def get_session_by_id(
     sessionId: str,
+    authorization: str = Header(...),
     user: Dict[str, Any] = Depends(get_current_user),
     repo: PrismaDiagnosisSessionRepository = Depends(get_diagnosis_session_repository)
 ):
@@ -256,10 +259,9 @@ async def get_session_by_id(
 
                 # Obtener ubicación del vehículo
                 vehicle_id = str(session.vehicle_id)
-                auth_token = f"Bearer {user.get('token', '')}"
 
                 try:
-                    vehicle_data = await vehicle_client.get_vehicle(vehicle_id, user_id, auth_token)
+                    vehicle_data = await vehicle_client.get_vehicle(vehicle_id, user_id, authorization)
 
                     if vehicle_data and vehicle_data.get("latitude") and vehicle_data.get("longitude"):
                         user_location = {

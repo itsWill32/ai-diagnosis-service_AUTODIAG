@@ -1,7 +1,7 @@
 
 
 from typing import List, Dict, Any
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Header
 from uuid import UUID
 
 from app.infrastructure.dependencies import (
@@ -41,6 +41,7 @@ router = APIRouter()
 async def get_workshop_recommendations(
     sessionId: str,
     limit: int = Query(3, ge=1, le=10, description="Número de recomendaciones"),
+    authorization: str = Header(...),
     user: Dict[str, Any] = Depends(get_current_vehicle_owner),
     session_repo: PrismaDiagnosisSessionRepository = Depends(get_diagnosis_session_repository),
     classification_repo = Depends(get_problem_classification_repository),
@@ -95,11 +96,11 @@ async def get_workshop_recommendations(
     
     # 3. Obtener ubicación del vehículo
     vehicle_id = str(session.vehicle_id)
-    
+
     try:
-        vehicle_data = await vehicle_client.get_vehicle(vehicle_id, f"Bearer {user.get('token', '')}")
+        vehicle_data = await vehicle_client.get_vehicle(vehicle_id, user["userId"], authorization)
     except Exception as e:
-        # Si falla, usar ubicación por defecto (Ciudad de México)
+        # Si falla, usar ubicación por defecto (Suchiapa)
         print(f"Error obteniendo vehículo: {e}")
         vehicle_data = None
     
@@ -110,7 +111,7 @@ async def get_workshop_recommendations(
             "longitude": vehicle_data["longitude"]
         }
     else:
-        # Ubicación por defecto: Ciudad de México (centro)
+        # Ubicación por defecto: Suchiapa
         user_location = {
             "latitude": 16.62640635652556,
             "longitude": -93.10006537851791

@@ -9,7 +9,9 @@ from app.infrastructure.dependencies import (
     get_current_admin_user,
     get_diagnosis_session_repository,
     get_problem_classification_repository,
-    get_sentiment_analysis_repository
+    get_sentiment_analysis_repository,
+    get_workshop_client,
+    get_appointment_client
 )
 from app.infrastructure.api.routers.schemas import (
     AnalyticsDashboardResponse,
@@ -40,7 +42,9 @@ async def get_analytics_dashboard(
     toDate: Optional[str] = Query(None, description="Fecha fin (YYYY-MM-DD)"),
     user: Dict[str, Any] = Depends(get_current_admin_user),
     session_repo = Depends(get_diagnosis_session_repository),
-    classification_repo = Depends(get_problem_classification_repository)
+    classification_repo = Depends(get_problem_classification_repository),
+    workshop_client = Depends(get_workshop_client),
+    appointment_client = Depends(get_appointment_client)
 ):
 
     if not fromDate or not toDate:
@@ -149,6 +153,23 @@ async def get_analytics_dashboard(
         avg_response_time = 0.0
         top_problems = []
     
+    # Obtener total de talleres del workshop-service
+    try:
+        admin_token = user.get("token", "")
+        workshops_response = await workshop_client.get_workshops(limit=1, admin_token=admin_token)
+        total_workshops = workshops_response.get("total", 0)
+    except Exception as e:
+        print(f"Error obteniendo total de talleres: {e}")
+        total_workshops = 0
+    
+    # Obtener total de citas del appointment-service
+    try:
+        admin_token = user.get("token", "")
+        total_appointments = await appointment_client.count_appointments(admin_token=admin_token)
+    except Exception as e:
+        print(f"Error obteniendo total de citas: {e}")
+        total_appointments = 0
+    
     return AnalyticsDashboardResponse(
         period={
             "fromDate": from_date.strftime("%Y-%m-%d"),
@@ -157,8 +178,8 @@ async def get_analytics_dashboard(
         totals={
             "totalDiagnoses": total_diagnoses,
             "totalUsers": unique_users,
-            "totalWorkshops": 0,  # TODO: Integrar con workshop-service
-            "totalAppointments": 0  # TODO: Integrar con appointment-service
+            "totalWorkshops": total_workshops,
+            "totalAppointments": total_appointments
         },
         trends={
             "diagnosesGrowth": diagnoses_growth,

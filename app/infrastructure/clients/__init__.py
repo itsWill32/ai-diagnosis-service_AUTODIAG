@@ -9,6 +9,11 @@ from .workshop_service_client import (
     get_workshop_service_client
 )
 
+from .appointment_service_client import (
+    AppointmentServiceClient,
+    get_appointment_service_client
+)
+
 
 __all__ = [
 
@@ -18,4 +23,7 @@ __all__ = [
 
     "WorkshopServiceClient",
     "get_workshop_service_client",
+    
+    "AppointmentServiceClient",
+    "get_appointment_service_client",
 ]

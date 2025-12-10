@@ -195,6 +195,101 @@ class WorkshopServiceClient:
             for s in specialties_list 
             if s.get("specialtyType")
         ]
+    
+    async def get_workshops(
+        self,
+        page: int = 1,
+        limit: int = 100,
+        min_rating: Optional[float] = None,
+        admin_token: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Obtiene lista de talleres con paginación.
+        
+        Args:
+            page: Número de página
+            limit: Elementos por página
+            min_rating: Calificación mínima
+            admin_token: Token JWT del admin
+            
+        Returns:
+            Dict con 'data' (lista de talleres) y 'total' (count total)
+        """
+        url = f"{self.base_url}/workshops"
+        
+        params = {
+            "page": page,
+            "limit": limit
+        }
+        
+        if min_rating:
+            params["minRating"] = min_rating
+        
+        headers = {"Content-Type": "application/json"}
+        if admin_token:
+            headers["Authorization"] = f"Bearer {admin_token}"
+        
+        try:
+            async with httpx.AsyncClient(timeout=self.timeout) as client:
+                response = await client.get(url, params=params, headers=headers)
+                
+                if response.status_code != 200:
+                    return {"data": [], "total": 0}
+                
+                result = response.json()
+                
+                # Si la respuesta tiene formato de paginación
+                if isinstance(result, dict) and "data" in result:
+                    return result
+                # Si es un array directo
+                elif isinstance(result, list):
+                    return {"data": result, "total": len(result)}
+                else:
+                    return {"data": [], "total": 0}
+                    
+        except httpx.HTTPError:
+            return {"data": [], "total": 0}
+    
+    async def get_review_statistics(
+        self,
+        workshop_id: str,
+        auth_token: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Obtiene estadísticas de reseñas de un taller.
+        
+        Args:
+            workshop_id: ID del taller
+            auth_token: Token JWT (opcional)
+            
+        Returns:
+            Dict con estadísticas de reseñas
+        """
+        url = f"{self.base_url}/workshops/{workshop_id}/reviews/statistics"
+        
+        headers = {"Content-Type": "application/json"}
+        if auth_token:
+            headers["Authorization"] = auth_token
+        
+        try:
+            async with httpx.AsyncClient(timeout=self.timeout) as client:
+                response = await client.get(url, headers=headers)
+                
+                if response.status_code != 200:
+                    return {
+                        "totalReviews": 0,
+                        "averageRating": 0.0,
+                        "ratingDistribution": {}
+                    }
+                
+                return response.json()
+                    
+        except httpx.HTTPError:
+            return {
+                "totalReviews": 0,
+                "averageRating": 0.0,
+                "ratingDistribution": {}
+            }
 
 
 _client_instance: Optional[WorkshopServiceClient] = None

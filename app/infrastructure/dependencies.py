@@ -24,7 +24,8 @@ from app.infrastructure.services import (
 
 from app.infrastructure.clients import (
     get_vehicle_service_client,
-    get_workshop_service_client
+    get_workshop_service_client,
+    get_appointment_service_client
 )
 
 
@@ -180,6 +181,13 @@ def get_workshop_client():
     return get_workshop_service_client()
 
 
+def get_appointment_client():
+    """
+    Factory function para obtener el cliente de appointment-service.
+    """
+    return get_appointment_service_client()
+
+
 
 __all__ = [
 
@@ -204,4 +212,5 @@ __all__ = [
 
     "get_vehicle_client",
     "get_workshop_client",
+    "get_appointment_client",
 ]

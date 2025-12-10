@@ -12,7 +12,7 @@ class AppointmentServiceClient:
     Cliente para interactuar con el microservicio de citas (appointment-service).
     """
     
-    def __init__(self, base_url: str = "https://appointment-service-autodiag.onrender.com"):
+    def __init__(self, base_url: str = "https://appointment-service-autodiag.onrender.com/api"):
         self.base_url = base_url.rstrip("/")
         self.timeout = 10.0
     

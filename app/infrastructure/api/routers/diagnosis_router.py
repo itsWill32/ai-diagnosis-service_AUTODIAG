@@ -6,7 +6,7 @@ from app.infrastructure.dependencies import (
     get_current_user,
     get_current_vehicle_owner,
     get_diagnosis_session_repository,
-    get_gemini_service,
+    get_claude_service,
     get_vehicle_client
 )
 from app.infrastructure.api.routers.schemas import (
@@ -20,7 +20,7 @@ from app.infrastructure.api.routers.schemas import (
 )
 
 from app.infrastructure.repositories import PrismaDiagnosisSessionRepository
-from app.infrastructure.services import GeminiService
+from app.infrastructure.services import ClaudeService
 from app.infrastructure.clients import VehicleServiceClient
 
 
@@ -117,7 +117,7 @@ async def create_diagnosis_session(
     session.add_message(user_message)
     
     try:
-        gemini_response = await gemini.generate_response(
+        claude_response = await claude.generate_response(
             session=session,
             user_message=data.initialMessage
         )
@@ -152,7 +152,7 @@ async def create_diagnosis_session(
             content=assistant_message.content.value,
             timestamp=assistant_message.timestamp
         ),
-        suggestedQuestions=gemini_response.get("suggested_questions", [])
+        suggestedQuestions=claude_response.get("suggested_questions", [])
     )
 
 
@@ -426,7 +426,7 @@ async def send_message(
     session.add_message(user_message)
     
     try:
-        gemini_response = await gemini.generate_response(
+        claude_response = await claude.generate_response(
             session=session,
             user_message=data.content
         )
@@ -461,5 +461,5 @@ async def send_message(
             content=assistant_message.content.value,
             timestamp=assistant_message.timestamp
         ),
-        suggestedQuestions=gemini_response.get("suggested_questions", [])
+        suggestedQuestions=claude_response.get("suggested_questions", [])
     )

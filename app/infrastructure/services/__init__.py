@@ -1,5 +1,5 @@
 
-from .gemini_service import GeminiService
+from .claude_service import ClaudeService
 from .problem_classifier_service import ProblemClassifierService
 from .urgency_calculator_service import UrgencyCalculatorService
 from .cost_estimator_service import CostEstimatorService
@@ -9,7 +9,7 @@ from .report_generator_service import ReportGeneratorService
 
 
 __all__ = [
-    "GeminiService",
+    "ClaudeService",
     "ProblemClassifierService",
     "UrgencyCalculatorService",
     "CostEstimatorService",

@@ -21,7 +21,7 @@ class WorkshopServiceClient:
         auth_token: Optional[str] = None
     ) -> Optional[Dict[str, Any]]:
 
-        url = f"{self.base_url}/workshops/{workshop_id}"
+        url = f"{self.base_url}/api/workshops/{workshop_id}"
         
         headers = {"Content-Type": "application/json"}
         if auth_token:

@@ -218,7 +218,7 @@ async def get_problems_analytics(
     # Queries reales para problemas
     try:
         # Obtener todas las clasificaciones del período
-        classifications = await classification_repo.prisma.problemclassification.find_many(
+        classifications = await classification_repo.db.problemclassification.find_many(
             where={
                 "createdAt": {
                     "gte": from_date,
@@ -319,6 +319,7 @@ async def get_workshops_performance(
 async def get_ml_models_metrics(
     user: Dict[str, Any] = Depends(get_current_admin_user),
     classification_repo = Depends(get_problem_classification_repository),
+    session_repo = Depends(get_diagnosis_session_repository),
     sentiment_repo = Depends(get_sentiment_analysis_repository)
 ):
 

@@ -215,8 +215,8 @@ class WorkshopServiceClient:
         Returns:
             Dict con 'data' (lista de talleres) y 'total' (count total)
         """
-        # La URL base ya incluye /api/workshops, solo agregamos query params
-        url = self.base_url
+        # Usar el path completo que funciona en Postman
+        url = f"{self.base_url}/api/workshops/workshops"
         
         params = {
             "page": page,

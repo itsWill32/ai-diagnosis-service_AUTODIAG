@@ -73,24 +73,31 @@ class AppointmentServiceClient:
         admin_token: Optional[str] = None
     ) -> int:
         """
-        Cuenta el total de citas en el sistema.
+        Cuenta el total de citas en el sistema usando el endpoint público.
         
         Args:
-            status: Filtrar por estado
-            from_date: Fecha inicio
-            to_date: Fecha fin
-            admin_token: Token JWT del admin
+            status: Filtrar por estado (no soportado en endpoint público)
+            from_date: Fecha inicio (no soportado en endpoint público)
+            to_date: Fecha fin (no soportado en endpoint público)
+            admin_token: Token JWT del admin (no requerido, endpoint público)
             
         Returns:
             Número total de citas
         """
-        appointments = await self.get_all_appointments(
-            status=status,
-            from_date=from_date,
-            to_date=to_date,
-            admin_token=admin_token
-        )
-        return len(appointments)
+        try:
+            async with httpx.AsyncClient(timeout=self.timeout) as client:
+                response = await client.get(f"{self.base_url}/stats/count")
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    return data.get("total", 0)
+                else:
+                    print(f"Error obteniendo conteo de citas: {response.status_code}")
+                    return 0
+                    
+        except Exception as e:
+            print(f"Error en AppointmentServiceClient.count_appointments: {e}")
+            return 0
     
     async def get_workshop_appointments(
         self,

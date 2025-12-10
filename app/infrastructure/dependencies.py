@@ -18,7 +18,8 @@ from app.infrastructure.services import (
     ProblemClassifierService,
     UrgencyCalculatorService,
     CostEstimatorService,
-    SentimentAnalyzerService
+    SentimentAnalyzerService,
+    WorkshopRecommenderService
 )
 
 from app.infrastructure.clients import (
@@ -161,6 +162,12 @@ def get_sentiment_analyzer_service() -> SentimentAnalyzerService:
     return SentimentAnalyzerService()
 
 
+def get_workshop_recommender_service() -> WorkshopRecommenderService:
+
+    workshop_client = get_workshop_service_client()
+    return WorkshopRecommenderService(workshop_client)
+
+
 
 
 def get_vehicle_client():
@@ -192,6 +199,7 @@ __all__ = [
     "get_urgency_calculator_service",
     "get_cost_estimator_service",
     "get_sentiment_analyzer_service",
+    "get_workshop_recommender_service",
     
 
     "get_vehicle_client",

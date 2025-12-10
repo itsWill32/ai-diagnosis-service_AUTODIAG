@@ -2,6 +2,7 @@
 from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, Field, validator
 from datetime import datetime
+from uuid import UUID
 from enum import Enum
 
 
@@ -191,12 +192,17 @@ class CostEstimateResponse(BaseModel):
 
 
 class WorkshopRecommendationResponse(BaseModel):
-    workshopId: str
+    workshopId: UUID
     workshopName: str
     matchScore: float = Field(..., ge=0.0, le=1.0, description="Qué tan bien coincide (0-1)")
     reasons: List[str] = Field(..., description="Razones de la recomendación")
     distanceKm: float
-    rating: float = Field(..., ge=1.0, le=5.0)
+    rating: float = Field(..., ge=0.0, le=5.0)
+    
+    # Campos opcionales enriquecidos
+    address: Optional[str] = None
+    phone: Optional[str] = None
+    specialties: Optional[List[str]] = []
     
     class Config:
         json_schema_extra = {
@@ -210,7 +216,10 @@ class WorkshopRecommendationResponse(BaseModel):
                     "A solo 2.3 km de tu ubicación"
                 ],
                 "distanceKm": 2.3,
-                "rating": 4.8
+                "rating": 4.8,
+                "address": "Av. Insurgentes Sur 1234, Col. Del Valle",
+                "phone": "+52 55 1234 5678",
+                "specialties": ["FRENOS", "SUSPENSION", "MOTOR"]
             }
         }
 

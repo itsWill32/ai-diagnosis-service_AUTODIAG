@@ -210,12 +210,13 @@ class WorkshopServiceClient:
             page: Número de página
             limit: Elementos por página
             min_rating: Calificación mínima
-            admin_token: Token JWT del admin
+            admin_token: Token JWT del admin (opcional)
             
         Returns:
             Dict con 'data' (lista de talleres) y 'total' (count total)
         """
-        url = f"{self.base_url}/workshops"
+        # La URL base ya incluye /api/workshops, solo agregamos query params
+        url = self.base_url
         
         params = {
             "page": page,

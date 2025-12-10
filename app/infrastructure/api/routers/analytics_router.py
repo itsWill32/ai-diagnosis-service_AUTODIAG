@@ -155,8 +155,7 @@ async def get_analytics_dashboard(
     
     # Obtener total de talleres del workshop-service
     try:
-        admin_token = user.get("token", "")
-        workshops_response = await workshop_client.get_workshops(limit=1, admin_token=admin_token)
+        workshops_response = await workshop_client.get_workshops(limit=1)
         total_workshops = workshops_response.get("total", 0)
     except Exception as e:
         print(f"Error obteniendo total de talleres: {e}")
@@ -164,8 +163,7 @@ async def get_analytics_dashboard(
     
     # Obtener total de citas del appointment-service
     try:
-        admin_token = user.get("token", "")
-        total_appointments = await appointment_client.count_appointments(admin_token=admin_token)
+        total_appointments = await appointment_client.count_appointments()
     except Exception as e:
         print(f"Error obteniendo total de citas: {e}")
         total_appointments = 0

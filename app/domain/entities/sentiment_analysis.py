@@ -27,16 +27,17 @@ class SentimentAnalysis:
         negative_score: float,
         context: Optional[dict] = None,
         analyzed_at: Optional[datetime] = None,
+        workshop_id: Optional[UUID] = None,
     ):
         if not text or text.strip() == "":
             raise EmptyTextException()
-        
+
         if len(text) > self.MAX_TEXT_LENGTH:
             raise TextTooLongException(
                 length=len(text),
                 max_length=self.MAX_TEXT_LENGTH,
             )
-        
+
         self._analysis_id = analysis_id
         self._text = text
         self._sentiment_label = sentiment_label
@@ -46,6 +47,7 @@ class SentimentAnalysis:
         self._negative_score = negative_score
         self._context = context or {}
         self._analyzed_at = analyzed_at or datetime.utcnow()
+        self._workshop_id = workshop_id
     
     @staticmethod
     def create(
@@ -56,11 +58,12 @@ class SentimentAnalysis:
         neutral_score: float,
         negative_score: float,
         context: Optional[dict] = None,
+        workshop_id: Optional[UUID] = None,
     ) -> "SentimentAnalysis":
         """Factory method para crear un nuevo análisis"""
-        
+
         from uuid import uuid4
-        
+
         return SentimentAnalysis(
             analysis_id=uuid4(),
             text=text,
@@ -70,6 +73,7 @@ class SentimentAnalysis:
             neutral_score=neutral_score,
             negative_score=negative_score,
             context=context,
+            workshop_id=workshop_id,
         )
     
     
@@ -109,7 +113,11 @@ class SentimentAnalysis:
     @property
     def analyzed_at(self) -> datetime:
         return self._analyzed_at
-    
+
+    @property
+    def workshop_id(self) -> Optional[UUID]:
+        return self._workshop_id
+
     def is_positive(self) -> bool:
         return self._sentiment_label.is_positive()
     
@@ -137,6 +145,7 @@ class SentimentAnalysis:
             "negative_score": self._negative_score,
             "context": self._context,
             "analyzed_at": self._analyzed_at.isoformat(),
+            "workshop_id": str(self._workshop_id) if self._workshop_id else None,
         }
     
     @staticmethod
@@ -150,9 +159,10 @@ class SentimentAnalysis:
         negative_score: float,
         context: Optional[dict],
         analyzed_at: datetime,
+        workshop_id: Optional[str] = None,
     ) -> "SentimentAnalysis":
         """Reconstruye la entidad desde primitivos"""
-        
+
         return SentimentAnalysis(
             analysis_id=UUID(analysis_id),
             text=text,
@@ -163,4 +173,5 @@ class SentimentAnalysis:
             negative_score=negative_score,
             context=context,
             analyzed_at=analyzed_at,
+            workshop_id=UUID(workshop_id) if workshop_id else None,
         )

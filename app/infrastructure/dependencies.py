@@ -19,7 +19,8 @@ from app.infrastructure.services import (
     UrgencyCalculatorService,
     CostEstimatorService,
     SentimentAnalyzerService,
-    WorkshopRecommenderService
+    WorkshopRecommenderService,
+    ReportGeneratorService
 )
 
 from app.infrastructure.clients import (
@@ -169,6 +170,11 @@ def get_workshop_recommender_service() -> WorkshopRecommenderService:
     return WorkshopRecommenderService(workshop_client)
 
 
+def get_report_generator_service() -> ReportGeneratorService:
+
+    return ReportGeneratorService()
+
+
 
 
 def get_vehicle_client():
@@ -195,12 +201,12 @@ __all__ = [
     "get_current_admin_user",
     "get_current_workshop_admin",
     "get_current_vehicle_owner",
-    
+
 
     "get_diagnosis_session_repository",
     "get_problem_classification_repository",
     "get_sentiment_analysis_repository",
-    
+
 
     "get_gemini_service",
     "get_problem_classifier_service",
@@ -208,7 +214,8 @@ __all__ = [
     "get_cost_estimator_service",
     "get_sentiment_analyzer_service",
     "get_workshop_recommender_service",
-    
+    "get_report_generator_service",
+
 
     "get_vehicle_client",
     "get_workshop_client",

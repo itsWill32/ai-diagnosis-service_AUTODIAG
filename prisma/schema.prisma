@@ -167,20 +167,24 @@ model WorkshopRecommendation {
 
 model SentimentAnalysis {
   id          String   @id @default(uuid())
-  
+
   text        String   @db.Text
-  
+
   context     Json?
-  
+
+  // Optional workshop reference (for workshop review sentiment)
+  workshopId  String?
+
   label       SentimentLabel
   score       Float    // 0.0 to 1.0
-  
+
   scores      Json     // {positive, neutral, negative}
-  
+
   analyzedAt  DateTime @default(now())
-  
+
   @@index([label])
   @@index([analyzedAt])
+  @@index([workshopId])
   @@map("sentiment_analyses")
 }
 

@@ -112,8 +112,8 @@ async def get_workshop_recommendations(
     else:
         # Ubicación por defecto: Ciudad de México (centro)
         user_location = {
-            "latitude": 19.4326,
-            "longitude": -99.1332
+            "latitude": 16.62640635652556,
+            "longitude": -93.10006537851791
         }
     
     # 4. Ejecutar algoritmo de recomendación

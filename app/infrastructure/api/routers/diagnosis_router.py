@@ -164,22 +164,163 @@ async def get_session_by_id(
     user: Dict[str, Any] = Depends(get_current_user),
     repo: PrismaDiagnosisSessionRepository = Depends(get_diagnosis_session_repository)
 ):
+    from app.infrastructure.dependencies import (
+        get_problem_classification_repository,
+        get_urgency_calculator_service,
+        get_cost_estimator_service,
+        get_workshop_recommender_service,
+        get_vehicle_client,
+        get_workshop_client
+    )
+    from app.infrastructure.api.routers.schemas import (
+        ClassificationResponse,
+        UrgencyResponse,
+        CostEstimateResponse,
+        CostBreakdown,
+        WorkshopRecommendationResponse
+    )
+
     user_id = user["userId"]
-    
+
     session = await repo.find_by_id(UUID(sessionId))
-    
+
     if not session:
         raise HTTPException(
             status_code=404,
             detail=f"Sesión {sessionId} no encontrada"
         )
-    
+
     if str(session.user_id) != user_id:
         raise HTTPException(
             status_code=403,
             detail="No tienes acceso a esta sesión"
         )
-    
+
+    # Inicializar valores por defecto
+    classification_data = None
+    urgency_data = None
+    cost_estimate_data = None
+    recommendations_data = []
+
+    # Obtener clasificación si existe
+    classification_repo = get_problem_classification_repository()
+
+    try:
+        classification = await classification_repo.find_by_session_id(sessionId)
+
+        if classification:
+            # Construir response de clasificación
+            classification_data = {
+                "id": str(classification.id),
+                "sessionId": sessionId,
+                "category": classification.category.value,
+                "subcategory": classification.subcategory,
+                "confidenceScore": classification.confidence_score.value,
+                "symptoms": classification.symptoms,
+                "createdAt": classification.created_at.isoformat() if hasattr(classification.created_at, 'isoformat') else str(classification.created_at)
+            }
+
+            # Calcular urgencia
+            urgency_calc = get_urgency_calculator_service()
+            urgency_level, description, safe_to_drive, max_km = urgency_calc.calculate_urgency(classification)
+
+            urgency_data = {
+                "level": urgency_level.value,
+                "description": description,
+                "safeToDriver": safe_to_drive,
+                "maxMileageRecommended": max_km
+            }
+
+            # Calcular estimación de costos
+            cost_estimator = get_cost_estimator_service()
+            min_cost, max_cost, breakdown, disclaimer = cost_estimator.estimate_cost(
+                classification, urgency_level
+            )
+
+            cost_estimate_data = {
+                "minCost": min_cost,
+                "maxCost": max_cost,
+                "currency": "MXN",
+                "breakdown": {
+                    "partsMin": breakdown["parts"]["min"],
+                    "partsMax": breakdown["parts"]["max"],
+                    "laborMin": breakdown["labor"]["min"],
+                    "laborMax": breakdown["labor"]["max"]
+                },
+                "disclaimer": disclaimer
+            }
+
+            # Obtener recomendaciones de talleres
+            try:
+                vehicle_client = get_vehicle_client()
+
+                # Obtener ubicación del vehículo
+                vehicle_id = str(session.vehicle_id)
+                auth_token = f"Bearer {user.get('token', '')}"
+
+                try:
+                    vehicle_data = await vehicle_client.get_vehicle(vehicle_id, user_id, auth_token)
+
+                    if vehicle_data and vehicle_data.get("latitude") and vehicle_data.get("longitude"):
+                        user_location = {
+                            "latitude": vehicle_data["latitude"],
+                            "longitude": vehicle_data["longitude"]
+                        }
+                    else:
+                        # Ubicación por defecto: Ciudad de México
+                        user_location = {
+                            "latitude": 19.4326,
+                            "longitude": -99.1332
+                        }
+                except Exception:
+                    user_location = {
+                        "latitude": 19.4326,
+                        "longitude": -99.1332
+                    }
+
+                # Obtener recomendaciones
+                recommender_service = get_workshop_recommender_service()
+                category = classification.category.value
+
+                recommendations = await recommender_service.recommend_workshops(
+                    category=category,
+                    user_location=user_location,
+                    limit=3
+                )
+
+                # Enriquecer con datos del workshop-service
+                workshop_client = get_workshop_client()
+
+                for rec in recommendations:
+                    workshop_id = rec["workshop_id"]
+
+                    try:
+                        workshop_details = await workshop_client.get_workshop(workshop_id)
+                    except Exception:
+                        workshop_details = None
+
+                    recommendations_data.append({
+                        "workshopId": workshop_id,
+                        "workshopName": rec.get("workshop_name", "Taller"),
+                        "matchScore": rec["match_score"],
+                        "reasons": rec["reasons"],
+                        "distanceKm": rec["distance_km"],
+                        "rating": rec.get("rating", 0.0),
+                        "address": workshop_details.get("address") if workshop_details else None,
+                        "phone": workshop_details.get("phone") if workshop_details else None,
+                        "specialties": [
+                            s.get("specialtyType")
+                            for s in workshop_details.get("specialties", [])
+                        ] if workshop_details else []
+                    })
+
+            except Exception as e:
+                print(f"Error obteniendo recomendaciones: {e}")
+                recommendations_data = []
+
+    except Exception as e:
+        print(f"Error obteniendo clasificación: {e}")
+
     return SessionDetailResponse(
         id=str(session.id.value),
         userId=str(session.user_id),
@@ -189,10 +330,10 @@ async def get_session_by_id(
         completedAt=session.completed_at,
         messagesCount=len(session.messages),
         summary=session.summary,
-        classification=None,
-        urgency=None,
-        costEstimate=None,
-        recommendations=[]
+        classification=classification_data,
+        urgency=urgency_data,
+        costEstimate=cost_estimate_data,
+        recommendations=recommendations_data
     )
 
 

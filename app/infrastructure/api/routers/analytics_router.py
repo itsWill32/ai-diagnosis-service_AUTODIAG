@@ -335,11 +335,10 @@ async def get_workshops_performance(
             
             # Obtener análisis de sentimiento local (si existe)
             try:
-                # Buscar análisis de sentimiento relacionados a este taller
-                # En nuestra DB no tenemos workshopId en SentimentAnalysis,
-                # así que por ahora usamos un promedio general
-                sentiment_score = 0.0
-            except Exception:
+                # Buscar análisis de sentimiento relacionados a este taller usando el nuevo campo workshopId
+                sentiment_score = await sentiment_repo.get_sentiment_score_by_workshop(workshop_id)
+            except Exception as e:
+                print(f"Error obteniendo sentiment score para taller {workshop_id}: {e}")
                 sentiment_score = 0.0
             
             # Construir respuesta de performance
@@ -493,9 +492,13 @@ async def get_ml_models_metrics(
 )
 async def generate_custom_report(
     data: GenerateReportRequest,
-    user: Dict[str, Any] = Depends(get_current_admin_user)
+    user: Dict[str, Any] = Depends(get_current_admin_user),
+    session_repo = Depends(get_diagnosis_session_repository),
+    classification_repo = Depends(get_problem_classification_repository)
 ):
-   
+    from app.infrastructure.dependencies import get_report_generator_service
+    import os
+
     try:
         from_date = datetime.fromisoformat(data.fromDate)
         to_date = datetime.fromisoformat(data.toDate)
@@ -504,17 +507,167 @@ async def generate_custom_report(
             status_code=400,
             detail="Formato de fecha inválido. Use YYYY-MM-DD"
         )
-    
+
     if from_date > to_date:
         raise HTTPException(
             status_code=400,
             detail="fromDate debe ser anterior a toDate"
         )
-    
 
-    
+    # Obtener datos para el reporte según el tipo
     report_id = str(uuid4())
-    
+
+    try:
+        if data.reportType in ["MONTHLY_SUMMARY", "QUARTERLY_SUMMARY", "CUSTOM"]:
+            # Obtener datos del dashboard
+            try:
+                total_diagnoses = await session_repo.db.diagnosissession.count(
+                    where={
+                        "startedAt": {
+                            "gte": from_date,
+                            "lte": to_date
+                        }
+                    }
+                )
+
+                sessions_in_period = await session_repo.db.diagnosissession.find_many(
+                    where={
+                        "startedAt": {
+                            "gte": from_date,
+                            "lte": to_date
+                        }
+                    }
+                )
+                unique_users = len(set(s.userId for s in sessions_in_period))
+
+                classifications = await classification_repo.db.problemclassification.find_many(
+                    where={
+                        "createdAt": {
+                            "gte": from_date,
+                            "lte": to_date
+                        }
+                    }
+                )
+
+                category_counts = {}
+                for c in classifications:
+                    cat = c.category
+                    category_counts[cat] = category_counts.get(cat, 0) + 1
+
+                top_problems = [
+                    {
+                        "category": cat,
+                        "count": count,
+                        "percentage": round((count / total_diagnoses * 100) if total_diagnoses > 0 else 0, 1)
+                    }
+                    for cat, count in sorted(category_counts.items(), key=lambda x: x[1], reverse=True)[:5]
+                ]
+
+                period_duration = (to_date - from_date).days
+                prev_from_date = from_date - timedelta(days=period_duration)
+                prev_to_date = from_date
+
+                prev_diagnoses = await session_repo.db.diagnosissession.count(
+                    where={
+                        "startedAt": {
+                            "gte": prev_from_date,
+                            "lte": prev_to_date
+                        }
+                    }
+                )
+
+                if prev_diagnoses > 0:
+                    diagnoses_growth = round(((total_diagnoses - prev_diagnoses) / prev_diagnoses) * 100, 1)
+                else:
+                    diagnoses_growth = 100.0 if total_diagnoses > 0 else 0.0
+
+                completed_sessions = await session_repo.db.diagnosissession.find_many(
+                    where={
+                        "startedAt": {
+                            "gte": from_date,
+                            "lte": to_date
+                        },
+                        "status": "COMPLETED",
+                        "completedAt": {"not": None}
+                    }
+                )
+
+                if completed_sessions:
+                    total_duration = sum(
+                        (s.completedAt - s.startedAt).total_seconds() / 60
+                        for s in completed_sessions
+                        if s.completedAt
+                    )
+                    avg_response_time = round(total_duration / len(completed_sessions), 1)
+                else:
+                    avg_response_time = 0.0
+
+                report_data = {
+                    "period": {
+                        "fromDate": data.fromDate,
+                        "toDate": data.toDate
+                    },
+                    "totals": {
+                        "totalDiagnoses": total_diagnoses,
+                        "totalUsers": unique_users,
+                        "totalWorkshops": 0,
+                        "totalAppointments": 0
+                    },
+                    "trends": {
+                        "diagnosesGrowth": diagnoses_growth,
+                        "avgResponseTime": avg_response_time
+                    },
+                    "topProblems": top_problems
+                }
+
+            except Exception as e:
+                print(f"Error obteniendo datos del reporte: {e}")
+                report_data = {
+                    "period": {
+                        "fromDate": data.fromDate,
+                        "toDate": data.toDate
+                    },
+                    "totals": {
+                        "totalDiagnoses": 0,
+                        "totalUsers": 0,
+                        "totalWorkshops": 0,
+                        "totalAppointments": 0
+                    },
+                    "trends": {
+                        "diagnosesGrowth": 0.0,
+                        "avgResponseTime": 0.0
+                    },
+                    "topProblems": []
+                }
+
+        # Crear directorio para reportes si no existe
+        reports_dir = os.path.join(os.getcwd(), "reports")
+        os.makedirs(reports_dir, exist_ok=True)
+
+        # Generar PDF
+        file_name = f"{report_id}.pdf"
+        file_path = os.path.join(reports_dir, file_name)
+
+        report_generator = get_report_generator_service()
+
+        if data.reportType == "MONTHLY_SUMMARY":
+            report_generator.generate_monthly_summary_pdf(report_data, file_path)
+        elif data.reportType == "QUARTERLY_SUMMARY":
+            report_generator.generate_quarterly_summary_pdf(report_data, file_path)
+        else:
+            report_generator.generate_custom_report_pdf(report_data, data.metrics, file_path)
+
+        # En producción, aquí subirías el PDF a un CDN (AWS S3, Cloudinary, etc.)
+        # Por ahora, retornamos una URL local
+        file_url = f"/reports/{file_name}"
+
+    except Exception as e:
+        print(f"Error generando reporte: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error generando reporte: {str(e)}"
+        )
+
     return ReportResponse(
         id=report_id,
         reportType=data.reportType,
@@ -523,6 +676,6 @@ async def generate_custom_report(
             "toDate": data.toDate
         },
         format=data.format,
-        fileUrl=f"https://cdn.autodiag.com/reports/{report_id}.{data.format.lower()}",  
+        fileUrl=file_url,
         generatedAt=datetime.utcnow()
     )

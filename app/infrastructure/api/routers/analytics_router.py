@@ -69,8 +69,7 @@ async def get_analytics_dashboard(
                     "gte": from_date,
                     "lte": to_date
                 }
-            },
-            select={"userId": True}
+            }
         )
         unique_users = len(set(s.userId for s in sessions_in_period))
         
@@ -81,8 +80,7 @@ async def get_analytics_dashboard(
                     "gte": from_date,
                     "lte": to_date
                 }
-            },
-            select={"category": True}
+            }
         )
         
         # Contar por categoría
@@ -129,8 +127,7 @@ async def get_analytics_dashboard(
                 },
                 "status": "COMPLETED",
                 "completedAt": {"not": None}
-            },
-            select={"startedAt": True, "completedAt": True}
+            }
         )
         
         if completed_sessions:
@@ -310,13 +307,7 @@ async def get_ml_models_metrics(
     try:
         # 1. PROBLEM CLASSIFIER METRICS
         # Obtener todas las clasificaciones
-        all_classifications = await classification_repo.db.problemclassification.find_many(
-            select={
-                "category": True,
-                "confidenceScore": True,
-                "symptoms": True
-            }
-        )
+        all_classifications = await classification_repo.db.problemclassification.find_many()
         
         total_classifications = len(all_classifications)
         
@@ -347,13 +338,7 @@ async def get_ml_models_metrics(
         
         # 2. WORKSHOP RECOMMENDER METRICS
         # Obtener recomendaciones generadas
-        workshop_recommendations = await session_repo.db.workshoprecommendation.find_many(
-            select={
-                "sessionId": True,
-                "workshopId": True,
-                "matchScore": True
-            }
-        )
+        workshop_recommendations = await session_repo.db.workshoprecommendation.find_many()
         
         total_recommendations = len(workshop_recommendations)
         
@@ -377,12 +362,7 @@ async def get_ml_models_metrics(
         
         # 3. SENTIMENT ANALYZER METRICS
         # Obtener análisis de sentimiento
-        sentiment_analyses = await sentiment_repo.db.sentimentanalysis.find_many(
-            select={
-                "label": True,
-                "score": True
-            }
-        )
+        sentiment_analyses = await sentiment_repo.db.sentimentanalysis.find_many()
         
         total_analyzed = len(sentiment_analyses)
         

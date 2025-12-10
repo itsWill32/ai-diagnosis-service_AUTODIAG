@@ -258,39 +258,108 @@ class WorkshopServiceClient:
     ) -> Dict[str, Any]:
         """
         Obtiene estadísticas de reseñas de un taller.
-        
+
         Args:
             workshop_id: ID del taller
             auth_token: Token JWT (opcional)
-            
+
         Returns:
             Dict con estadísticas de reseñas
         """
         url = f"{self.base_url}/workshops/{workshop_id}/reviews/statistics"
-        
+
         headers = {"Content-Type": "application/json"}
         if auth_token:
             headers["Authorization"] = auth_token
-        
+
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 response = await client.get(url, headers=headers)
-                
+
                 if response.status_code != 200:
                     return {
                         "totalReviews": 0,
                         "averageRating": 0.0,
                         "ratingDistribution": {}
                     }
-                
+
                 return response.json()
-                    
+
         except httpx.HTTPError:
             return {
                 "totalReviews": 0,
                 "averageRating": 0.0,
                 "ratingDistribution": {}
             }
+
+    async def create_review(
+        self,
+        workshop_id: str,
+        appointment_id: str,
+        overall_rating: int,
+        comment: Optional[str] = None,
+        quality_rating: Optional[int] = None,
+        price_rating: Optional[int] = None,
+        time_compliance_rating: Optional[int] = None,
+        customer_service_rating: Optional[int] = None,
+        auth_token: str = None
+    ) -> Dict[str, Any]:
+        """
+        Crea una reseña para un taller.
+
+        Args:
+            workshop_id: ID del taller
+            appointment_id: ID de la cita
+            overall_rating: Calificación general (1-5)
+            comment: Comentario opcional
+            quality_rating: Calificación de calidad (1-5)
+            price_rating: Calificación de precio (1-5)
+            time_compliance_rating: Calificación de cumplimiento de tiempo (1-5)
+            customer_service_rating: Calificación de atención al cliente (1-5)
+            auth_token: Token JWT del VEHICLE_OWNER
+
+        Returns:
+            Dict con los datos de la reseña creada
+        """
+        url = f"{self.base_url}/api/workshops/{workshop_id}/reviews"
+
+        # Construir el payload con el formato correcto que espera el DTO
+        payload = {
+            "appointmentId": appointment_id,
+            "rating": {
+                "overall": overall_rating
+            }
+        }
+
+        # Agregar calificaciones opcionales
+        if quality_rating is not None:
+            payload["rating"]["quality"] = quality_rating
+        if price_rating is not None:
+            payload["rating"]["price"] = price_rating
+        if time_compliance_rating is not None:
+            payload["rating"]["timeCompliance"] = time_compliance_rating
+        if customer_service_rating is not None:
+            payload["rating"]["customerService"] = customer_service_rating
+
+        # Agregar comentario si existe
+        if comment:
+            payload["comment"] = comment
+
+        headers = {"Content-Type": "application/json"}
+        if auth_token:
+            headers["Authorization"] = auth_token
+
+        try:
+            async with httpx.AsyncClient(timeout=self.timeout) as client:
+                response = await client.post(url, json=payload, headers=headers)
+                response.raise_for_status()
+                return response.json()
+
+        except httpx.HTTPError as e:
+            print(f"Error creando reseña: {e}")
+            if hasattr(e, 'response') and e.response:
+                print(f"Response: {e.response.text}")
+            raise
 
 
 _client_instance: Optional[WorkshopServiceClient] = None

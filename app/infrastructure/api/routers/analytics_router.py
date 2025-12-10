@@ -53,7 +53,7 @@ async def get_analytics_dashboard(
     # Queries reales a Prisma
     try:
         # Total de diagnósticos en el período
-        total_diagnoses = await session_repo.prisma.diagnosissession.count(
+        total_diagnoses = await session_repo.db.diagnosissession.count(
             where={
                 "startedAt": {
                     "gte": from_date,
@@ -63,7 +63,7 @@ async def get_analytics_dashboard(
         )
         
         # Usuarios únicos en el período
-        sessions_in_period = await session_repo.prisma.diagnosissession.find_many(
+        sessions_in_period = await session_repo.db.diagnosissession.find_many(
             where={
                 "startedAt": {
                     "gte": from_date,
@@ -75,7 +75,7 @@ async def get_analytics_dashboard(
         unique_users = len(set(s.userId for s in sessions_in_period))
         
         # Top problemas (categorías más frecuentes)
-        classifications = await classification_repo.prisma.problemclassification.find_many(
+        classifications = await classification_repo.db.problemclassification.find_many(
             where={
                 "createdAt": {
                     "gte": from_date,
@@ -106,7 +106,7 @@ async def get_analytics_dashboard(
         prev_from_date = from_date - timedelta(days=period_duration)
         prev_to_date = from_date
         
-        prev_diagnoses = await session_repo.prisma.diagnosissession.count(
+        prev_diagnoses = await session_repo.db.diagnosissession.count(
             where={
                 "startedAt": {
                     "gte": prev_from_date,
@@ -121,7 +121,7 @@ async def get_analytics_dashboard(
             diagnoses_growth = 100.0 if total_diagnoses > 0 else 0.0
         
         # Calcular tiempo promedio de respuesta (sesiones completadas)
-        completed_sessions = await session_repo.prisma.diagnosissession.find_many(
+        completed_sessions = await session_repo.db.diagnosissession.find_many(
             where={
                 "startedAt": {
                     "gte": from_date,
@@ -310,7 +310,7 @@ async def get_ml_models_metrics(
     try:
         # 1. PROBLEM CLASSIFIER METRICS
         # Obtener todas las clasificaciones
-        all_classifications = await classification_repo.prisma.problemclassification.find_many(
+        all_classifications = await classification_repo.db.problemclassification.find_many(
             select={
                 "category": True,
                 "confidenceScore": True,
@@ -347,7 +347,7 @@ async def get_ml_models_metrics(
         
         # 2. WORKSHOP RECOMMENDER METRICS
         # Obtener recomendaciones generadas
-        workshop_recommendations = await session_repo.prisma.workshoprecommendation.find_many(
+        workshop_recommendations = await session_repo.db.workshoprecommendation.find_many(
             select={
                 "sessionId": True,
                 "workshopId": True,
@@ -377,7 +377,7 @@ async def get_ml_models_metrics(
         
         # 3. SENTIMENT ANALYZER METRICS
         # Obtener análisis de sentimiento
-        sentiment_analyses = await sentiment_repo.prisma.sentimentanalysis.find_many(
+        sentiment_analyses = await sentiment_repo.db.sentimentanalysis.find_many(
             select={
                 "label": True,
                 "score": True

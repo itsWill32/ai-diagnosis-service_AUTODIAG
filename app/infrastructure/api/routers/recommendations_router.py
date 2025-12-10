@@ -75,7 +75,7 @@ async def get_workshop_recommendations(
         )
     
     # Validar ownership
-    if session.get_user_id() != user["userId"]:
+    if str(session.user_id) != user["userId"]:
         raise HTTPException(
             status_code=403,
             detail="No tiene permiso para acceder a esta sesión"
@@ -94,7 +94,7 @@ async def get_workshop_recommendations(
         )
     
     # 3. Obtener ubicación del vehículo
-    vehicle_id = session.get_vehicle_id()
+    vehicle_id = str(session.vehicle_id)
     
     try:
         vehicle_data = await vehicle_client.get_vehicle(vehicle_id, f"Bearer {user.get('token', '')}")

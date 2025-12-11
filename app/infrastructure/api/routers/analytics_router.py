@@ -516,6 +516,25 @@ async def generate_custom_report(
 
     # Obtener datos para el reporte según el tipo
     report_id = str(uuid4())
+    
+    # Inicializar report_data por defecto
+    report_data = {
+        "period": {
+            "fromDate": data.fromDate,
+            "toDate": data.toDate
+        },
+        "totals": {
+            "totalDiagnoses": 0,
+            "totalUsers": 0,
+            "totalWorkshops": 0,
+            "totalAppointments": 0
+        },
+        "trends": {
+            "diagnosesGrowth": 0.0,
+            "avgResponseTime": 0.0
+        },
+        "topProblems": []
+    }
 
     try:
         if data.reportType in ["MONTHLY_SUMMARY", "QUARTERLY_SUMMARY", "CUSTOM"]:

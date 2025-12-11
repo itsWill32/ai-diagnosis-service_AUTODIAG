@@ -1,9 +1,10 @@
 
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
 from contextlib import asynccontextmanager
+from pathlib import Path
 import logging
 
 from app.infrastructure.config.settings import get_settings
@@ -179,6 +180,30 @@ app.include_router(
     prefix="/analytics",
     tags=["Analytics"]
 )
+
+
+# Endpoint para servir reportes PDF
+@app.get(
+    "/reports/{filename}",
+    tags=["Reports"],
+    summary="Serve PD Report"
+)
+async def serve_report(filename: str):
+    """Servir archivos PDF de reportes generados"""
+    reports_dir = Path("reports")
+    file_path = reports_dir / filename
+    
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Report not found")
+    
+    if not file_path.suffix == ".pdf":
+        raise HTTPException(status_code=400, detail="Only PDF files allowed")
+    
+    return FileResponse(
+        file_path,
+        media_type="application/pdf",
+        filename=filename
+    )
 
 
 

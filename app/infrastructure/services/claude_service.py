@@ -11,7 +11,7 @@ class ClaudeService:
     def __init__(self):
         """Inicializa el cliente de Claude (Anthropic)"""
         self.client = AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY)
-        self.model = "claude-3-5-sonnet-20241022"  # Modelo recomendado
+        self.model = "claude-3-sonnet-20240229"  # Modelo disponible verificado
         
         self.system_prompt = self._build_system_prompt()
     

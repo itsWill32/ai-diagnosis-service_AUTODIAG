@@ -130,7 +130,7 @@ async def create_diagnosis_session(
     assistant_message = DiagnosisMessage.create(
         session_id=session.id.value,
         role=MessageRole.ASSISTANT,
-        content=gemini_response["response"]
+        content=claude_response["response"]
     )
     
     session.add_message(assistant_message)
@@ -439,7 +439,7 @@ async def send_message(
     assistant_message = DiagnosisMessage.create(
         session_id=session.id.value,
         role=MessageRole.ASSISTANT,
-        content=gemini_response["response"]
+        content=claude_response["response"]
     )
     
     session.add_message(assistant_message)

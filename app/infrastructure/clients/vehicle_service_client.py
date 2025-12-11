@@ -11,7 +11,13 @@ class VehicleServiceClient:
     def __init__(self):
         self.settings = get_settings()
         self.base_url = self.settings.VEHICLE_SERVICE_URL
-        self.timeout = 20.0
+        # Asegurar que la URL incluya /api
+        if not self.base_url.endswith('/api'):
+            if self.base_url.endswith('/'):
+                self.base_url = self.base_url + 'api'
+            else:
+                self.base_url = self.base_url + '/api'
+        self.timeout = 10.0
         
     async def get_vehicle(
         self,
